@@ -34,6 +34,7 @@ final class Notifier {
         ensureChannels(c);
         Notification n = new Notification.Builder(c, CHANNEL_PARTS)
                 .setSmallIcon(R.drawable.ic_notif)
+                .setColor(c.getColor(R.color.accent))
                 .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))

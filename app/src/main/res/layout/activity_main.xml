@@ -2,6 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/screen_bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -10,184 +11,332 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Tekst do wysłania"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <EditText
-            android:id="@+id/text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="top|start"
-            android:hint="Wklej tekst tutaj"
-            android:importantForAutofill="no"
-            android:inputType="textMultiLine|textCapSentences"
-            android:maxLines="10"
-            android:minLines="6"
-            android:scrollbars="vertical" />
-
+        <!-- Nagłówek -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:orientation="horizontal">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp">
 
-            <Button
-                android:id="@+id/btn_paste"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Wklej ze schowka" />
-
-            <Button
-                android:id="@+id/btn_clear"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Wyczyść" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:contentDescription="Ikona Dzielnika"
+                android:src="@drawable/ic_logo" />
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginStart="14dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Długość części (znaki)"
-                    android:textSize="13sp" />
-
-                <EditText
-                    android:id="@+id/limit"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:importantForAutofill="no"
-                    android:inputType="number"
-                    android:maxLength="4" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                    android:text="Dzielnik"
+                    android:textColor="@color/text_primary"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
 
                 <TextView
+                    style="@style/Hint"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Przerwa między powiadomieniami (s)"
-                    android:textSize="13sp" />
-
-                <EditText
-                    android:id="@+id/delay"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:importantForAutofill="no"
-                    android:inputType="numberDecimal"
-                    android:maxLength="4" />
+                    android:text="Tnie tekst na części i wysyła je jako powiadomienia" />
             </LinearLayout>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/preview"
+        <!-- 1. Tekst -->
+        <LinearLayout
+            style="@style/Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textSize="14sp" />
+            android:layout_marginTop="12dp">
 
+            <TextView
+                style="@style/SectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="1. Wklej tekst" />
+
+            <EditText
+                android:id="@+id/text"
+                style="@style/Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="top|start"
+                android:hint="Tutaj wklej tekst do wysłania"
+                android:importantForAutofill="no"
+                android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="10"
+                android:minLines="6"
+                android:scrollbars="vertical" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_paste"
+                    style="@style/TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Wklej ze schowka" />
+
+                <Button
+                    android:id="@+id/btn_clear"
+                    style="@style/TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Wyczyść" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 2. Ustawienia -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="2. Ustaw części" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Hint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Długość części (znaki)" />
+
+                    <EditText
+                        android:id="@+id/limit"
+                        style="@style/Input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:importantForAutofill="no"
+                        android:inputType="number"
+                        android:maxLength="4" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Hint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Przerwa (sekundy)" />
+
+                    <EditText
+                        android:id="@+id/delay"
+                        style="@style/Input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:importantForAutofill="no"
+                        android:inputType="numberDecimal"
+                        android:maxLength="4" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <Switch
+                android:id="@+id/sw_reverse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:minHeight="48dp"
+                android:text="Wysyłaj od ostatniej części do pierwszej"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Najnowsze powiadomienie jest w panelu na samej górze. Przy tej opcji część 1 przyjdzie ostatnia, więc będzie pierwsza od góry." />
+
+            <TextView
+                android:id="@+id/preview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/accent"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 3. Wyślij -->
         <Button
             android:id="@+id/btn_send"
+            style="@style/PrimaryButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="16dp"
             android:text="Podziel i wyślij" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="20dp"
-            android:layout_marginBottom="16dp"
-            android:background="#33888888" />
-
-        <TextView
+        <ProgressBar
+            android:id="@+id/progress"
+            style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Pomiar długości powiadomienia"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="10dp"
+            android:progressTint="@color/accent"
+            android:visibility="gone" />
 
         <TextView
+            android:id="@+id/status"
+            style="@style/Hint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="1. Wyślij test.\n2. Rozwiń powiadomienie i przepisz jego końcówkę razem ze średnikiem przed ostatnią liczbą, np. ;120;45\n3. Naciśnij Oblicz."
+            android:gravity="center"
             android:textSize="14sp" />
 
+        <!-- Pomiar -->
         <LinearLayout
+            style="@style/Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_marginTop="16dp">
 
-            <EditText
-                android:id="@+id/test_len"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:id="@+id/measure_header"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Długość testu"
-                android:importantForAutofill="no"
-                android:inputType="number"
-                android:maxLength="4" />
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:minHeight="40dp"
+                android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/btn_test"
-                android:layout_width="0dp"
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Zmierz limit powiadomienia" />
+
+                <TextView
+                    android:id="@+id/measure_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pokaż"
+                    android:textColor="@color/accent"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/measure_body"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Wyślij test" />
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/Hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Telefon lub zegarek pokazuje tylko początek długiego powiadomienia. Sprawdź, ile znaków się mieści:\n1. Naciśnij „Wyślij test”.\n2. Rozwiń powiadomienie i przepisz jego końcówkę razem ze średnikiem przed ostatnią liczbą, np. ;120;45\n3. Naciśnij „Oblicz długość”." />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/test_len"
+                        style="@style/Input"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:hint="Długość testu"
+                        android:importantForAutofill="no"
+                        android:inputType="number"
+                        android:maxLength="4" />
+
+                    <Button
+                        android:id="@+id/btn_test"
+                        style="@style/SecondaryButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Wyślij test" />
+                </LinearLayout>
+
+                <EditText
+                    android:id="@+id/seen"
+                    style="@style/Input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="Końcówka, którą widzisz, np. ;120;45"
+                    android:importantForAutofill="no"
+                    android:inputType="textNoSuggestions|textVisiblePassword" />
+
+                <Button
+                    android:id="@+id/btn_decode"
+                    style="@style/SecondaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Oblicz długość" />
+
+                <TextView
+                    android:id="@+id/result"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btn_use"
+                    style="@style/SecondaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:enabled="false"
+                    android:text="Ustaw jako długość części" />
+            </LinearLayout>
         </LinearLayout>
 
-        <EditText
-            android:id="@+id/seen"
+        <View
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="Końcówka, którą widzisz, np. ;120;45"
-            android:importantForAutofill="no"
-            android:inputType="textNoSuggestions|textVisiblePassword" />
-
-        <Button
-            android:id="@+id/btn_decode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Oblicz długość" />
-
-        <TextView
-            android:id="@+id/result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textSize="16sp" />
-
-        <Button
-            android:id="@+id/btn_use"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:enabled="false"
-            android:text="Ustaw jako długość części" />
+            android:layout_height="16dp" />
     </LinearLayout>
 </ScrollView>

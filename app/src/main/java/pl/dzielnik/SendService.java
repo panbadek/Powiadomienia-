@@ -26,17 +26,29 @@ public class SendService extends Service {
 
     private static volatile List<String> pending;
     private static volatile long delayMs = 2000;
+    private static volatile boolean reverseOrder;
 
-    /** Czy trwa wysyłanie (odczytuje to ekran aplikacji). */
+    // Stan wysyłania, odczytywany przez ekran aplikacji.
     static volatile boolean running;
+    static volatile boolean completed;
+    static volatile int totalParts;
+    static volatile int sentParts;
 
     private volatile boolean stopRequested;
     private Thread worker;
 
-    static boolean start(Context c, List<String> parts, long delayMs) {
+    /**
+     * @param reverse true = od ostatniej części do pierwszej (część 1 przychodzi na końcu,
+     *                więc w panelu powiadomień, gdzie najnowsze są na górze, jest pierwsza od góry)
+     */
+    static boolean start(Context c, List<String> parts, long delayMs, boolean reverse) {
         if (running) return false;
         pending = parts;
         SendService.delayMs = delayMs;
+        reverseOrder = reverse;
+        totalParts = parts.size();
+        sentParts = 0;
+        completed = false;
         running = true;
         try {
             c.startForegroundService(new Intent(c, SendService.class));
@@ -75,28 +87,32 @@ public class SendService extends Service {
             if (worker == null) finish();
             return START_NOT_STICKY;
         }
-        worker = new Thread(() -> run(parts), "dzielnik-wysylka");
+        final boolean reverse = reverseOrder;
+        worker = new Thread(() -> run(parts, reverse), "dzielnik-wysylka");
         worker.start();
         return START_NOT_STICKY;
     }
 
-    private void run(List<String> parts) {
+    private void run(List<String> parts, boolean reverse) {
         NotificationManager nm = Notifier.manager(this);
         int total = parts.size();
         try {
-            for (int i = 0; i < total && !stopRequested; i++) {
+            for (int k = 0; k < total && !stopRequested; k++) {
+                int i = reverse ? total - 1 - k : k;
+
                 // Przy limicie 50 powiadomień czekam, aż użytkownik część z nich usunie.
                 while (!stopRequested && nm.getActiveNotifications().length >= MAX_ACTIVE) {
                     nm.notify(Notifier.ID_PROGRESS,
-                            progress(i, total, "Czekam, aż usuniesz część powiadomień"));
+                            progress(k, total, "Czekam, aż usuniesz część powiadomień"));
                     Thread.sleep(1500);
                 }
                 if (stopRequested) break;
 
                 Notifier.post(this, Notifier.ID_PART_BASE + i,
                         "Część " + (i + 1) + "/" + total, parts.get(i));
-                nm.notify(Notifier.ID_PROGRESS, progress(i + 1, total, null));
-                if (i + 1 < total) Thread.sleep(delayMs);
+                sentParts = k + 1;
+                nm.notify(Notifier.ID_PROGRESS, progress(k + 1, total, null));
+                if (k + 1 < total) Thread.sleep(delayMs);
             }
         } catch (InterruptedException ignored) {
             // zatrzymano wysyłanie
@@ -106,6 +122,7 @@ public class SendService extends Service {
     }
 
     private void finish() {
+        completed = !stopRequested && totalParts > 0 && sentParts >= totalParts;
         running = false;
         pending = null;
         stopForeground(STOP_FOREGROUND_REMOVE);
@@ -120,6 +137,7 @@ public class SendService extends Service {
                 Icon.createWithResource(this, R.drawable.ic_notif), "Zatrzymaj", pi).build();
         return new Notification.Builder(this, Notifier.CHANNEL_PROGRESS)
                 .setSmallIcon(R.drawable.ic_notif)
+                .setColor(getColor(R.color.accent))
                 .setContentTitle("Wysłano " + done + " z " + total)
                 .setContentText(info == null ? "Dzielnik wysyła tekst" : info)
                 .setProgress(total, done, false)

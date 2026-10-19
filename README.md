@@ -9,6 +9,7 @@ Wklejasz tekst, aplikacja tnie go na części o zadanej długości (w znakach) i
 - Zdanie dłuższe niż cały limit dzielę po słowach, żeby cały tekst został wysłany.
 - Między powiadomieniami jest przerwa (domyślnie 2 s). Android pozwala aplikacji mieć naraz 50 powiadomień, więc przy tym limicie wysyłanie czeka, aż usuniesz część.
 - Tekst możesz też wysłać do Dzielnika z innej aplikacji: Udostępnij → Dzielnik.
+- Opcja „Wysyłaj od ostatniej części do pierwszej”: najnowsze powiadomienie jest w panelu na samej górze, więc przy tej opcji część 1 przychodzi ostatnia i jest pierwsza od góry. Numery w tytułach („Część 3/12”) się nie zmieniają.
 
 ## Pomiar długości powiadomienia
 

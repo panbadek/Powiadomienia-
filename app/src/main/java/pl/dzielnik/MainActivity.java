@@ -15,8 +15,11 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,16 +32,22 @@ public class MainActivity extends Activity {
     private static final int DEFAULT_TEST = 400;
 
     private EditText text, limit, delay, testLen, seen;
-    private TextView preview, result;
+    private TextView preview, result, status, measureToggle;
     private Button send, use;
+    private Switch reverse;
+    private ProgressBar progress;
+    private View measureBody;
+
     private int measured = -1;
+    private boolean wasRunning;
+    private Boolean shownRunning;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable refresh = new Runnable() {
         @Override
         public void run() {
-            send.setText(SendService.running ? "Zatrzymaj wysyłanie" : "Podziel i wyślij");
-            handler.postDelayed(this, 500);
+            updateSendState();
+            handler.postDelayed(this, 400);
         }
     };
 
@@ -54,13 +63,19 @@ public class MainActivity extends Activity {
         seen = findViewById(R.id.seen);
         preview = findViewById(R.id.preview);
         result = findViewById(R.id.result);
+        status = findViewById(R.id.status);
+        measureToggle = findViewById(R.id.measure_toggle);
+        measureBody = findViewById(R.id.measure_body);
         send = findViewById(R.id.btn_send);
         use = findViewById(R.id.btn_use);
+        reverse = findViewById(R.id.sw_reverse);
+        progress = findViewById(R.id.progress);
 
         SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
         limit.setText(String.valueOf(sp.getInt("limit", DEFAULT_LIMIT)));
         delay.setText(sp.getString("delay", "2"));
         testLen.setText(String.valueOf(sp.getInt("testLen", DEFAULT_TEST)));
+        reverse.setChecked(sp.getBoolean("reverse", false));
 
         // pole tekstu przewija się samo, mimo że leży w ScrollView
         text.setOnTouchListener((v, ev) -> {
@@ -77,14 +92,15 @@ public class MainActivity extends Activity {
 
         findViewById(R.id.btn_paste).setOnClickListener(v -> pasteFromClipboard());
         findViewById(R.id.btn_clear).setOnClickListener(v -> text.setText(""));
-        send.setOnClickListener(v -> onSend());
+        findViewById(R.id.measure_header).setOnClickListener(v -> toggleMeasure());
         findViewById(R.id.btn_test).setOnClickListener(v -> onTest());
         findViewById(R.id.btn_decode).setOnClickListener(v -> onDecode());
+        send.setOnClickListener(v -> onSend());
         use.setOnClickListener(v -> {
             if (measured >= Splitter.MIN_LIMIT) {
                 limit.setText(String.valueOf(measured));
                 saveSettings();
-                toast("Długość części ustawiona na " + measured + ".");
+                toast("Długość części ustawiona na " + measured + " znaków.");
             }
         });
 
@@ -133,14 +149,50 @@ public class MainActivity extends Activity {
         }
         if (!notificationsAllowed()) return;
         saveSettings();
-        if (SendService.start(this, parts, readDelayMs())) {
-            toast("Wysyłam " + parts.size() + " powiadomień…");
+        if (SendService.start(this, parts, readDelayMs(), reverse.isChecked())) {
+            status.setText("Zaczynam wysyłać…");
+            toast("Wysyłam " + parts.size() + " " + powiadomien(parts.size()) + "…");
         } else {
             toast("Nie udało się uruchomić wysyłania. Spróbuj jeszcze raz przy otwartej aplikacji.");
         }
     }
 
+    /** Odświeża przycisk, pasek postępu i podpis podczas wysyłania. */
+    private void updateSendState() {
+        boolean running = SendService.running;
+        if (shownRunning == null || shownRunning != running) {
+            shownRunning = running;
+            if (running) {
+                send.setText("Zatrzymaj wysyłanie");
+                send.setBackgroundResource(R.drawable.bg_btn_stop);
+                progress.setVisibility(View.VISIBLE);
+            } else {
+                send.setText("Podziel i wyślij");
+                send.setBackgroundResource(R.drawable.bg_btn_primary);
+                progress.setVisibility(View.GONE);
+            }
+        }
+        int total = SendService.totalParts;
+        int sent = SendService.sentParts;
+        if (running) {
+            progress.setMax(Math.max(1, total));
+            progress.setProgress(sent);
+            status.setText("Wysłano " + sent + " z " + total);
+        } else if (wasRunning) {
+            status.setText(SendService.completed
+                    ? "Gotowe! Wysłano wszystko (" + total + "). Zajrzyj do panelu powiadomień."
+                    : "Zatrzymano. Wysłano " + sent + " z " + total + ".");
+        }
+        wasRunning = running;
+    }
+
     // ---------- pomiar ----------
+
+    private void toggleMeasure() {
+        boolean open = measureBody.getVisibility() != View.VISIBLE;
+        measureBody.setVisibility(open ? View.VISIBLE : View.GONE);
+        measureToggle.setText(open ? "Ukryj" : "Pokaż");
+    }
 
     private void onTest() {
         int len = parseInt(testLen);
@@ -205,8 +257,8 @@ public class MainActivity extends Activity {
             List<String> parts = Splitter.split(t, lim);
             int longest = 0;
             for (String p : parts) longest = Math.max(longest, p.length());
-            preview.setText("Części: " + parts.size() + " · najdłuższa: " + longest
-                    + " zn. · cały tekst: " + t.length() + " zn.");
+            preview.setText("Tekst (" + t.length() + " zn.) zostanie podzielony na " + parts.size() + " "
+                    + (parts.size() == 1 ? "część" : "części") + ". Najdłuższa ma " + longest + " zn.");
         }
     }
 
@@ -231,6 +283,7 @@ public class MainActivity extends Activity {
         int test = parseInt(testLen);
         if (test >= 9 && test <= Measure.MAX) ed.putInt("testLen", test);
         ed.putString("delay", String.valueOf(readDelayMs() / 1000.0).replaceAll("\\.0$", ""));
+        ed.putBoolean("reverse", reverse.isChecked());
         ed.apply();
     }
 
@@ -244,6 +297,14 @@ public class MainActivity extends Activity {
         }
         sec = Math.max(0.5, Math.min(60, sec));
         return Math.round(sec * 1000);
+    }
+
+    private static String powiadomien(int n) {
+        if (n == 1) return "powiadomienie";
+        int last = n % 10;
+        int last2 = n % 100;
+        if (last >= 2 && last <= 4 && !(last2 >= 12 && last2 <= 14)) return "powiadomienia";
+        return "powiadomień";
     }
 
     private static int parseInt(EditText e) {
