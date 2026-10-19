@@ -27,14 +27,12 @@ import java.util.List;
 
 public class MainActivity extends Activity {
 
-    private static final String PREFS = "dzielnik";
-    private static final int DEFAULT_LIMIT = 200;
     private static final int DEFAULT_TEST = 400;
 
-    private EditText text, limit, delay, testLen, seen;
-    private TextView preview, result, status, measureToggle;
+    private EditText text, limit, delay, testLen, seen, gemKey, gemModel, gemQuestion;
+    private TextView preview, result, status, measureToggle, gemStatus;
     private Button send, use;
-    private Switch reverse;
+    private Switch reverse, replySwitch;
     private ProgressBar progress;
     private View measureBody;
 
@@ -47,6 +45,7 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             updateSendState();
+            updateGeminiState();
             handler.postDelayed(this, 400);
         }
     };
@@ -70,21 +69,23 @@ public class MainActivity extends Activity {
         use = findViewById(R.id.btn_use);
         reverse = findViewById(R.id.sw_reverse);
         progress = findViewById(R.id.progress);
+        gemKey = findViewById(R.id.gem_key);
+        gemModel = findViewById(R.id.gem_model);
+        gemQuestion = findViewById(R.id.gem_question);
+        gemStatus = findViewById(R.id.gem_status);
+        replySwitch = findViewById(R.id.sw_reply);
 
-        SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
-        limit.setText(String.valueOf(sp.getInt("limit", DEFAULT_LIMIT)));
-        delay.setText(sp.getString("delay", "2"));
-        testLen.setText(String.valueOf(sp.getInt("testLen", DEFAULT_TEST)));
-        reverse.setChecked(sp.getBoolean("reverse", false));
+        SharedPreferences sp = Prefs.get(this);
+        limit.setText(String.valueOf(sp.getInt(Prefs.LIMIT, Prefs.DEFAULT_LIMIT)));
+        delay.setText(sp.getString(Prefs.DELAY, "2"));
+        testLen.setText(String.valueOf(sp.getInt(Prefs.TEST_LEN, DEFAULT_TEST)));
+        reverse.setChecked(sp.getBoolean(Prefs.REVERSE, false));
+        gemKey.setText(sp.getString(Prefs.GEMINI_KEY, ""));
+        gemModel.setText(sp.getString(Prefs.GEMINI_MODEL, Gemini.DEFAULT_MODEL));
+        replySwitch.setChecked(sp.getBoolean(Prefs.GEMINI_REPLY, true));
 
-        // pole tekstu przewija się samo, mimo że leży w ScrollView
-        text.setOnTouchListener((v, ev) -> {
-            v.getParent().requestDisallowInterceptTouchEvent(true);
-            if ((ev.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-                v.getParent().requestDisallowInterceptTouchEvent(false);
-            }
-            return false;
-        });
+        letScrollInside(text);
+        letScrollInside(gemQuestion);
 
         Watcher watcher = new Watcher(this::updatePreview);
         text.addTextChangedListener(watcher);
@@ -95,6 +96,9 @@ public class MainActivity extends Activity {
         findViewById(R.id.measure_header).setOnClickListener(v -> toggleMeasure());
         findViewById(R.id.btn_test).setOnClickListener(v -> onTest());
         findViewById(R.id.btn_decode).setOnClickListener(v -> onDecode());
+        findViewById(R.id.btn_ask).setOnClickListener(v -> onAsk());
+        findViewById(R.id.btn_ask_notif).setOnClickListener(v -> onAskNotification());
+        findViewById(R.id.btn_new_chat).setOnClickListener(v -> onNewChat());
         send.setOnClickListener(v -> onSend());
         use.setOnClickListener(v -> {
             if (measured >= Splitter.MIN_LIMIT) {
@@ -129,6 +133,17 @@ public class MainActivity extends Activity {
         super.onPause();
     }
 
+    /** Pole tekstu przewija się samo, mimo że leży w ScrollView. */
+    private static void letScrollInside(EditText field) {
+        field.setOnTouchListener((v, ev) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            if ((ev.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
+                v.getParent().requestDisallowInterceptTouchEvent(false);
+            }
+            return false;
+        });
+    }
+
     // ---------- wysyłanie ----------
 
     private void onSend() {
@@ -151,7 +166,7 @@ public class MainActivity extends Activity {
         saveSettings();
         if (SendService.start(this, parts, readDelayMs(), reverse.isChecked())) {
             status.setText("Zaczynam wysyłać…");
-            toast("Wysyłam " + parts.size() + " " + powiadomien(parts.size()) + "…");
+            toast("Wysyłam " + parts.size() + " " + Notifier.powiadomien(parts.size()) + "…");
         } else {
             toast("Nie udało się uruchomić wysyłania. Spróbuj jeszcze raz przy otwartej aplikacji.");
         }
@@ -184,6 +199,51 @@ public class MainActivity extends Activity {
                     : "Zatrzymano. Wysłano " + sent + " z " + total + ".");
         }
         wasRunning = running;
+    }
+
+    // ---------- Gemini ----------
+
+    private void onAsk() {
+        String question = gemQuestion.getText().toString().trim();
+        if (question.isEmpty()) {
+            toast("Wpisz pytanie do Gemini.");
+            return;
+        }
+        if (gemKey.getText().toString().trim().isEmpty()) {
+            toast("Najpierw wklej klucz API Gemini.");
+            return;
+        }
+        if (!notificationsAllowed()) return;
+        saveSettings();
+        if (GeminiService.start(this, question)) {
+            gemQuestion.setText("");
+            toast("Pytam Gemini. Odpowiedź przyjdzie jako powiadomienia.");
+        } else {
+            toast("Nie udało się wysłać pytania. Spróbuj jeszcze raz przy otwartej aplikacji.");
+        }
+    }
+
+    private void onAskNotification() {
+        if (gemKey.getText().toString().trim().isEmpty()) {
+            toast("Najpierw wklej klucz API Gemini.");
+            return;
+        }
+        if (!notificationsAllowed()) return;
+        saveSettings();
+        Notifier.postAsk(this, false);
+        toast("Wstawiłem powiadomienie „Zapytaj Gemini”. Naciśnij w nim „Odpowiedz”.");
+    }
+
+    private void onNewChat() {
+        Prefs.setHistory(this, "");
+        toast("Zaczynam nową rozmowę. Gemini nie pamięta poprzednich pytań.");
+    }
+
+    /** Pokazuje, co dzieje się z ostatnim pytaniem do Gemini. */
+    private void updateGeminiState() {
+        String st = GeminiService.status;
+        if (!st.contentEquals(gemStatus.getText())) gemStatus.setText(st);
+        gemStatus.setVisibility(st.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     // ---------- pomiar ----------
@@ -277,34 +337,26 @@ public class MainActivity extends Activity {
     }
 
     private void saveSettings() {
-        SharedPreferences.Editor ed = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        SharedPreferences.Editor ed = Prefs.get(this).edit();
         int lim = parseInt(limit);
-        if (lim >= Splitter.MIN_LIMIT && lim <= Measure.MAX) ed.putInt("limit", lim);
+        if (lim >= Splitter.MIN_LIMIT && lim <= Measure.MAX) ed.putInt(Prefs.LIMIT, lim);
         int test = parseInt(testLen);
-        if (test >= 9 && test <= Measure.MAX) ed.putInt("testLen", test);
-        ed.putString("delay", String.valueOf(readDelayMs() / 1000.0).replaceAll("\\.0$", ""));
-        ed.putBoolean("reverse", reverse.isChecked());
+        if (test >= 9 && test <= Measure.MAX) ed.putInt(Prefs.TEST_LEN, test);
+        ed.putString(Prefs.DELAY, String.valueOf(readDelayMs() / 1000.0).replaceAll("\\.0$", ""));
+        ed.putBoolean(Prefs.REVERSE, reverse.isChecked());
+
+        ed.putString(Prefs.GEMINI_KEY, gemKey.getText().toString().trim());
+        String typedModel = gemModel.getText().toString().trim();
+        String model = typedModel.isEmpty() ? Gemini.DEFAULT_MODEL : Gemini.cleanModel(typedModel);
+        ed.putString(Prefs.GEMINI_MODEL, model);
+        if (!model.equals(typedModel)) gemModel.setText(model);
+        ed.putBoolean(Prefs.GEMINI_REPLY, replySwitch.isChecked());
         ed.apply();
     }
 
     /** Przerwa między powiadomieniami w ms; dopuszczam przecinek i kropkę, zakres 0,5–60 s. */
     private long readDelayMs() {
-        double sec = 2;
-        try {
-            sec = Double.parseDouble(delay.getText().toString().trim().replace(',', '.'));
-        } catch (NumberFormatException ignored) {
-            // zostaje 2 s
-        }
-        sec = Math.max(0.5, Math.min(60, sec));
-        return Math.round(sec * 1000);
-    }
-
-    private static String powiadomien(int n) {
-        if (n == 1) return "powiadomienie";
-        int last = n % 10;
-        int last2 = n % 100;
-        if (last >= 2 && last <= 4 && !(last2 >= 12 && last2 <= 14)) return "powiadomienia";
-        return "powiadomień";
+        return Prefs.parseDelayMs(delay.getText().toString());
     }
 
     private static int parseInt(EditText e) {

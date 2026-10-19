@@ -21,9 +21,6 @@ public class SendService extends Service {
 
     private static final String ACTION_STOP = "pl.dzielnik.STOP";
 
-    /** Android pozwala jednej aplikacji mieć naraz 50 powiadomień. Zostawiam zapas na postęp i test. */
-    private static final int MAX_ACTIVE = 45;
-
     private static volatile List<String> pending;
     private static volatile long delayMs = 2000;
     private static volatile boolean reverseOrder;
@@ -77,10 +74,10 @@ public class SendService extends Service {
         final List<String> parts = pending;
         int total = parts == null ? 0 : parts.size();
         if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(Notifier.ID_PROGRESS, progress(0, total, null),
+            startForeground(Notifier.ID_PROGRESS, progressNotification(0, total, null),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
         } else {
-            startForeground(Notifier.ID_PROGRESS, progress(0, total, null));
+            startForeground(Notifier.ID_PROGRESS, progressNotification(0, total, null));
         }
 
         if (total == 0 || worker != null) {
@@ -94,26 +91,21 @@ public class SendService extends Service {
     }
 
     private void run(List<String> parts, boolean reverse) {
-        NotificationManager nm = Notifier.manager(this);
-        int total = parts.size();
+        final NotificationManager nm = Notifier.manager(this);
         try {
-            for (int k = 0; k < total && !stopRequested; k++) {
-                int i = reverse ? total - 1 - k : k;
+            Notifier.postParts(this, parts, "Część", true, Notifier.ID_PART_BASE, Notifier.KIND_PART,
+                    delayMs, reverse, new Notifier.Control() {
+                        @Override
+                        public boolean stopped() {
+                            return stopRequested;
+                        }
 
-                // Przy limicie 50 powiadomień czekam, aż użytkownik część z nich usunie.
-                while (!stopRequested && nm.getActiveNotifications().length >= MAX_ACTIVE) {
-                    nm.notify(Notifier.ID_PROGRESS,
-                            progress(k, total, "Czekam, aż usuniesz część powiadomień"));
-                    Thread.sleep(1500);
-                }
-                if (stopRequested) break;
-
-                Notifier.post(this, Notifier.ID_PART_BASE + i,
-                        "Część " + (i + 1) + "/" + total, parts.get(i));
-                sentParts = k + 1;
-                nm.notify(Notifier.ID_PROGRESS, progress(k + 1, total, null));
-                if (k + 1 < total) Thread.sleep(delayMs);
-            }
+                        @Override
+                        public void progress(int done, int total, String info) {
+                            if (info == null) sentParts = done;
+                            nm.notify(Notifier.ID_PROGRESS, progressNotification(done, total, info));
+                        }
+                    });
         } catch (InterruptedException ignored) {
             // zatrzymano wysyłanie
         } finally {
@@ -129,7 +121,7 @@ public class SendService extends Service {
         stopSelf();
     }
 
-    private Notification progress(int done, int total, String info) {
+    private Notification progressNotification(int done, int total, String info) {
         Intent stop = new Intent(this, SendService.class).setAction(ACTION_STOP);
         PendingIntent pi = PendingIntent.getService(this, 0, stop,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);

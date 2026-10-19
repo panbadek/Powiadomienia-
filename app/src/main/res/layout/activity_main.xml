@@ -220,6 +220,140 @@
             android:gravity="center"
             android:textSize="14sp" />
 
+        <!-- Gemini -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Gemini w powiadomieniach" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Gdy wpiszesz klucz, powiadomienia dostają przycisk „Odpowiedz”. Twoja odpowiedź razem z treścią powiadomienia idzie do Gemini, a jego odpowiedź wraca jako kolejne powiadomienia, dzielone tak samo jak tekst." />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Klucz API Gemini" />
+
+            <EditText
+                android:id="@+id/gem_key"
+                style="@style/Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:hint="Wklej klucz z Google AI Studio"
+                android:importantForAutofill="no"
+                android:inputType="textPassword" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Klucz zapisuje się tylko w tym telefonie i jest wysyłany wyłącznie do Google." />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Model" />
+
+            <EditText
+                android:id="@+id/gem_model"
+                style="@style/Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:hint="gemini-3.5-flash-lite"
+                android:importantForAutofill="no"
+                android:inputType="textNoSuggestions|textVisiblePassword" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Wersja Lite ma największy darmowy limit dzienny. Mocniejszy model, np. gemini-3.8-flash, odpowiada lepiej, ale darmowych pytań jest wtedy mało." />
+
+            <Switch
+                android:id="@+id/sw_reply"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:minHeight="48dp"
+                android:text="Przycisk „Odpowiedz” w powiadomieniach"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Zapytaj Gemini bez powiadomienia" />
+
+            <EditText
+                android:id="@+id/gem_question"
+                style="@style/Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="top|start"
+                android:hint="Wpisz pytanie"
+                android:importantForAutofill="no"
+                android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="6"
+                android:minLines="2"
+                android:scrollbars="vertical" />
+
+            <Button
+                android:id="@+id/btn_ask"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Zapytaj Gemini" />
+
+            <Button
+                android:id="@+id/btn_ask_notif"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Wstaw do powiadomień pole pytania" />
+
+            <TextView
+                android:id="@+id/gem_status"
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_new_chat"
+                style="@style/TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Zacznij nową rozmowę" />
+        </LinearLayout>
+
         <!-- Pomiar -->
         <LinearLayout
             style="@style/Card"
