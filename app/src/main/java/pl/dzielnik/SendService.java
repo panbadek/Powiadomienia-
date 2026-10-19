@@ -14,7 +14,8 @@ import android.os.IBinder;
 import java.util.List;
 
 /**
- * Wysyła kolejne części tekstu jako osobne powiadomienia, z przerwą między nimi.
+ * Wysyła kolejne części tekstu jako osobne powiadomienia i/lub wiadomości w Telegramie (zależnie od
+ * ustawienia „Gdzie wysyłać”), z przerwą między nimi.
  * Działa jako usługa pierwszoplanowa, więc wysyłanie trwa też po wyjściu z aplikacji.
  */
 public class SendService extends Service {
@@ -30,6 +31,8 @@ public class SendService extends Service {
     static volatile boolean completed;
     static volatile int totalParts;
     static volatile int sentParts;
+    /** Opis błędu wysyłania do Telegrama (po polsku) albo null. */
+    static volatile String error;
 
     private volatile boolean stopRequested;
     private Thread worker;
@@ -46,6 +49,7 @@ public class SendService extends Service {
         totalParts = parts.size();
         sentParts = 0;
         completed = false;
+        error = null;
         running = true;
         try {
             c.startForegroundService(new Intent(c, SendService.class));
@@ -92,20 +96,46 @@ public class SendService extends Service {
 
     private void run(List<String> parts, boolean reverse) {
         final NotificationManager nm = Notifier.manager(this);
-        try {
-            Notifier.postParts(this, parts, "Część", true, Notifier.ID_PART_BASE, Notifier.KIND_PART,
-                    delayMs, reverse, new Notifier.Control() {
-                        @Override
-                        public boolean stopped() {
-                            return stopRequested;
-                        }
+        int flags = Dest.flags(Prefs.dest(this), Prefs.telegramReady(this), false);
+        boolean toTelegram = (flags & Dest.F_TELEGRAM) != 0;
+        boolean toNotifications = (flags & Dest.F_NOTIFICATIONS) != 0;
 
-                        @Override
-                        public void progress(int done, int total, String info) {
-                            if (info == null) sentParts = done;
-                            nm.notify(Notifier.ID_PROGRESS, progressNotification(done, total, info));
-                        }
-                    });
+        // Telegram najpierw: to zwykle krótka praca przez sieć, a powiadomienia mogą czekać na użytkownika
+        // (przy limicie 50 naraz).
+        final List<String> messages = toTelegram ? Telegram.format(Telegram.fit(parts), "Część", true, reverse) : null;
+        final int telegramTotal = messages == null ? 0 : messages.size();
+        final int grandTotal = telegramTotal + (toNotifications ? parts.size() : 0);
+        totalParts = grandTotal;
+        try {
+            if (toTelegram) {
+                String problem = Telegram.sendAll(Telegram.DEFAULT_BASE, Prefs.telegramToken(this),
+                        Prefs.telegramChat(this), messages, delayMs, () -> stopRequested,
+                        (done, total) -> {
+                            sentParts = done;
+                            nm.notify(Notifier.ID_PROGRESS, progressNotification(done, grandTotal, "Wysyłam do Telegrama"));
+                        }, new int[]{2000, 5000});
+                if (problem != null) {
+                    error = problem;
+                    Notifier.postError(this, "Telegram: coś poszło nie tak", problem);
+                    return;
+                }
+            }
+            if (toNotifications && !stopRequested) {
+                Notifier.postParts(this, parts, "Część", true, Notifier.ID_PART_BASE, Notifier.KIND_PART,
+                        delayMs, reverse, new Notifier.Control() {
+                            @Override
+                            public boolean stopped() {
+                                return stopRequested;
+                            }
+
+                            @Override
+                            public void progress(int done, int total, String info) {
+                                if (info == null) sentParts = telegramTotal + done;
+                                nm.notify(Notifier.ID_PROGRESS,
+                                        progressNotification(telegramTotal + done, grandTotal, info));
+                            }
+                        });
+            }
         } catch (InterruptedException ignored) {
             // zatrzymano wysyłanie
         } finally {

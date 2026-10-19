@@ -18,7 +18,8 @@ import java.util.Map;
  */
 final class Gemini {
 
-    static final String DEFAULT_BASE = "https://generativelanguage.googleapis.com";
+    /** Adres API. Nie jest stały tylko po to, żeby testy mogły skierować aplikację na sztuczny serwer. */
+    static volatile String DEFAULT_BASE = "https://generativelanguage.googleapis.com";
 
     /** Lekki model z największym darmowym limitem dziennym. Wyższy model można wpisać w aplikacji. */
     static final String DEFAULT_MODEL = "gemini-3.5-flash-lite";

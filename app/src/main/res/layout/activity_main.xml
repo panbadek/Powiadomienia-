@@ -354,6 +354,155 @@
                 android:text="Zacznij nową rozmowę" />
         </LinearLayout>
 
+        <!-- Telegram: odpowiadanie z zegarka -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Odpowiadanie z zegarka (Telegram)" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Zegarek Huawei pozwala odpowiadać na powiadomienia tylko z wybranych komunikatorów, m.in. z Telegrama, więc powiadomienia Dzielnika nie dostaną na nim przycisku odpowiedzi. Dzielnik może za to pisać do Ciebie przez własnego bota w Telegramie. Odpowiadasz na zegarku, odpowiedź idzie do Gemini i wraca jako kolejna wiadomość." />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="1. W Telegramie otwórz @BotFather, wyślij /newbot i skopiuj token.\n2. Wklej go poniżej, otwórz swojego bota, napisz /start i naciśnij „Połącz”.\n3. Włącz nasłuch i wybierz, gdzie wysyłać części.\n4. W aplikacji Huawei Zdrowie włącz dla zegarka powiadomienia z Telegrama." />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Token bota" />
+
+            <EditText
+                android:id="@+id/tg_token"
+                style="@style/Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:hint="Token od @BotFather"
+                android:importantForAutofill="no"
+                android:inputType="textPassword" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Token zapisuje się tylko w tym telefonie. Wiadomości przechodzą przez serwery Telegrama, więc nie wysyłaj tak niczego poufnego." />
+
+            <Button
+                android:id="@+id/btn_tg_connect"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Połącz z botem" />
+
+            <TextView
+                android:id="@+id/tg_status"
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+
+            <Switch
+                android:id="@+id/sw_tg_listen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:minHeight="48dp"
+                android:text="Nasłuchuj pytań z Telegrama"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Nasłuch działa w tle z ikoną w pasku powiadomień. Po ponownym uruchomieniu telefonu otwórz Dzielnika, a włączy się sam. Żeby odpowiedź z zegarka dochodziła też przy wygaszonym ekranie, pozwól Dzielnikowi pracować bez ograniczeń baterii." />
+
+            <Button
+                android:id="@+id/btn_battery"
+                style="@style/TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Bateria: pozwól na pracę w tle" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Gdzie wysyłać części tekstu i odpowiedzi Gemini" />
+
+            <RadioGroup
+                android:id="@+id/rg_dest"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/rb_dest_notif"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="44dp"
+                    android:text="Powiadomienia Dzielnika"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_dest_tg"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="44dp"
+                    android:text="Telegram"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_dest_both"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="44dp"
+                    android:text="Oba"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+            </RadioGroup>
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Odpowiedź na pytanie zadane z Telegrama wraca do Telegrama. Wybór „Oba” dodaje do tego powiadomienia Dzielnika. Bez połączonego bota wszystko idzie jak dotąd, w powiadomieniach." />
+
+            <Button
+                android:id="@+id/btn_tg_test"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Wyślij wiadomość testową do Telegrama" />
+        </LinearLayout>
+
         <!-- Pomiar -->
         <LinearLayout
             style="@style/Card"

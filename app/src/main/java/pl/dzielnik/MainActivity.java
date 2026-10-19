@@ -8,10 +8,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.MotionEvent;
@@ -19,6 +21,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,12 +32,19 @@ public class MainActivity extends Activity {
 
     private static final int DEFAULT_TEST = 400;
 
-    private EditText text, limit, delay, testLen, seen, gemKey, gemModel, gemQuestion;
-    private TextView preview, result, status, measureToggle, gemStatus;
+    private EditText text, limit, delay, testLen, seen, gemKey, gemModel, gemQuestion, tgToken;
+    private TextView preview, result, status, measureToggle, gemStatus, tgStatus;
     private Button send, use;
-    private Switch reverse, replySwitch;
+    private Switch reverse, replySwitch, tgListen;
+    private RadioGroup destGroup;
     private ProgressBar progress;
     private View measureBody;
+
+    // Telegram: komunikat o ostatniej czynności (łączenie, test) i to, czy akurat coś się dzieje w tle.
+    private String tgNote = "";
+    private long tgNoteAt;
+    private boolean tgBusy;
+    private boolean updatingSwitch;
 
     private int measured = -1;
     private boolean wasRunning;
@@ -46,6 +56,7 @@ public class MainActivity extends Activity {
         public void run() {
             updateSendState();
             updateGeminiState();
+            updateTelegramState();
             handler.postDelayed(this, 400);
         }
     };
@@ -74,6 +85,10 @@ public class MainActivity extends Activity {
         gemQuestion = findViewById(R.id.gem_question);
         gemStatus = findViewById(R.id.gem_status);
         replySwitch = findViewById(R.id.sw_reply);
+        tgToken = findViewById(R.id.tg_token);
+        tgStatus = findViewById(R.id.tg_status);
+        tgListen = findViewById(R.id.sw_tg_listen);
+        destGroup = findViewById(R.id.rg_dest);
 
         SharedPreferences sp = Prefs.get(this);
         limit.setText(String.valueOf(sp.getInt(Prefs.LIMIT, Prefs.DEFAULT_LIMIT)));
@@ -83,6 +98,9 @@ public class MainActivity extends Activity {
         gemKey.setText(sp.getString(Prefs.GEMINI_KEY, ""));
         gemModel.setText(sp.getString(Prefs.GEMINI_MODEL, Gemini.DEFAULT_MODEL));
         replySwitch.setChecked(sp.getBoolean(Prefs.GEMINI_REPLY, true));
+        tgToken.setText(sp.getString(Prefs.TG_TOKEN, ""));
+        destGroup.check(destRadioId(Prefs.dest(this)));
+        setListenSwitch(sp.getBoolean(Prefs.TG_LISTEN, false));
 
         letScrollInside(text);
         letScrollInside(gemQuestion);
@@ -99,6 +117,10 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_ask).setOnClickListener(v -> onAsk());
         findViewById(R.id.btn_ask_notif).setOnClickListener(v -> onAskNotification());
         findViewById(R.id.btn_new_chat).setOnClickListener(v -> onNewChat());
+        findViewById(R.id.btn_tg_connect).setOnClickListener(v -> onTgConnect());
+        findViewById(R.id.btn_tg_test).setOnClickListener(v -> onTgTest());
+        findViewById(R.id.btn_battery).setOnClickListener(v -> onBatterySettings());
+        tgListen.setOnCheckedChangeListener((button, on) -> onTgListenChanged(on));
         send.setOnClickListener(v -> onSend());
         use.setOnClickListener(v -> {
             if (measured >= Splitter.MIN_LIMIT) {
@@ -111,6 +133,7 @@ public class MainActivity extends Activity {
         if (state == null) handleIntent(getIntent());
         askNotificationPermission();
         updatePreview();
+
     }
 
     @Override
@@ -123,7 +146,18 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        restartListenerIfNeeded();
         handler.post(refresh);
+    }
+
+    /**
+     * Nasłuch Telegrama ma działać, ale system mógł zabić usługę (restart telefonu, wyczyszczenie aplikacji
+     * z listy ostatnich, limit czasu usług w tle): uruchamiam ją znowu przy każdym wejściu do aplikacji.
+     */
+    private void restartListenerIfNeeded() {
+        if (Prefs.telegramListen(this) && Prefs.telegramReady(this) && !TelegramService.running) {
+            TelegramService.start(this);
+        }
     }
 
     @Override
@@ -166,7 +200,7 @@ public class MainActivity extends Activity {
         saveSettings();
         if (SendService.start(this, parts, readDelayMs(), reverse.isChecked())) {
             status.setText("Zaczynam wysyłać…");
-            toast("Wysyłam " + parts.size() + " " + Notifier.powiadomien(parts.size()) + "…");
+            toast("Wysyłam " + parts.size() + " " + (parts.size() == 1 ? "część" : "części") + "…");
         } else {
             toast("Nie udało się uruchomić wysyłania. Spróbuj jeszcze raz przy otwartej aplikacji.");
         }
@@ -194,9 +228,14 @@ public class MainActivity extends Activity {
             progress.setProgress(sent);
             status.setText("Wysłano " + sent + " z " + total);
         } else if (wasRunning) {
-            status.setText(SendService.completed
-                    ? "Gotowe! Wysłano wszystko (" + total + "). Zajrzyj do panelu powiadomień."
-                    : "Zatrzymano. Wysłano " + sent + " z " + total + ".");
+            String error = SendService.error;
+            if (error != null) {
+                status.setText(error + " Wysłano " + sent + " z " + total + ".");
+            } else if (SendService.completed) {
+                status.setText("Gotowe! Wysłano wszystko (" + total + "). " + whereToLook());
+            } else {
+                status.setText("Zatrzymano. Wysłano " + sent + " z " + total + ".");
+            }
         }
         wasRunning = running;
     }
@@ -217,7 +256,9 @@ public class MainActivity extends Activity {
         saveSettings();
         if (GeminiService.start(this, question)) {
             gemQuestion.setText("");
-            toast("Pytam Gemini. Odpowiedź przyjdzie jako powiadomienia.");
+            toast(Prefs.dest(this) == Dest.TELEGRAM && Prefs.telegramReady(this)
+                    ? "Pytam Gemini. Odpowiedź przyjdzie do Telegrama."
+                    : "Pytam Gemini. Odpowiedź przyjdzie jako powiadomienia.");
         } else {
             toast("Nie udało się wysłać pytania. Spróbuj jeszcze raz przy otwartej aplikacji.");
         }
@@ -235,7 +276,7 @@ public class MainActivity extends Activity {
     }
 
     private void onNewChat() {
-        Prefs.setHistory(this, "");
+        Answerer.newChat(this);
         toast("Zaczynam nową rozmowę. Gemini nie pamięta poprzednich pytań.");
     }
 
@@ -244,6 +285,171 @@ public class MainActivity extends Activity {
         String st = GeminiService.status;
         if (!st.contentEquals(gemStatus.getText())) gemStatus.setText(st);
         gemStatus.setVisibility(st.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    // ---------- Telegram ----------
+
+    /** Podpowiedź na koniec wysyłania: gdzie szukać części. */
+    private String whereToLook() {
+        int flags = Dest.flags(Prefs.dest(this), Prefs.telegramReady(this), false);
+        boolean tg = (flags & Dest.F_TELEGRAM) != 0;
+        boolean notif = (flags & Dest.F_NOTIFICATIONS) != 0;
+        if (tg && notif) return "Zajrzyj do panelu powiadomień i do Telegrama.";
+        return tg ? "Zajrzyj do Telegrama." : "Zajrzyj do panelu powiadomień.";
+    }
+
+    private void setNote(String note) {
+        tgNote = note;
+        tgNoteAt = System.currentTimeMillis();
+    }
+
+    private void setListenSwitch(boolean on) {
+        updatingSwitch = true;
+        tgListen.setChecked(on);
+        updatingSwitch = false;
+    }
+
+    private static int destRadioId(int dest) {
+        if (dest == Dest.TELEGRAM) return R.id.rb_dest_tg;
+        if (dest == Dest.BOTH) return R.id.rb_dest_both;
+        return R.id.rb_dest_notif;
+    }
+
+    private int selectedDest() {
+        int id = destGroup.getCheckedRadioButtonId();
+        if (id == R.id.rb_dest_tg) return Dest.TELEGRAM;
+        if (id == R.id.rb_dest_both) return Dest.BOTH;
+        return Dest.NOTIFICATIONS;
+    }
+
+    /** Sprawdza token, szuka czatu (po wiadomości „/start” do bota) i wysyła powitanie. */
+    private void onTgConnect() {
+        if (tgBusy) return;
+        if (TelegramService.running) {
+            toast("Najpierw wyłącz nasłuch, potem połącz od nowa.");
+            return;
+        }
+        final String token = Telegram.cleanToken(tgToken.getText().toString());
+        if (!Telegram.validToken(token)) {
+            toast("To nie wygląda jak token bota. Ma postać 123456789:ABC… i dostaje się go od @BotFather.");
+            return;
+        }
+        saveSettings();
+        tgBusy = true;
+        setNote("Łączę z Telegramem…");
+        new Thread(() -> {
+            final Telegram.Link link = Telegram.link(Telegram.DEFAULT_BASE, token, 15000, 30000);
+            handler.post(() -> onTgLinked(token, link));
+        }, "dzielnik-polacz").start();
+    }
+
+    private void onTgLinked(String token, Telegram.Link link) {
+        tgBusy = false;
+        if (!Telegram.cleanToken(tgToken.getText().toString()).equals(token)) {
+            setNote("");
+            return;
+        }
+        if (link.error != null) {
+            setNote(link.error);
+            return;
+        }
+        SharedPreferences.Editor ed = Prefs.get(this).edit();
+        ed.putString(Prefs.TG_BOT, link.bot);
+        if (!link.linked()) {
+            ed.apply();
+            setNote("Token działa (" + link.bot + "), ale nikt jeszcze nie napisał do bota. Otwórz go w Telegramie, "
+                    + "napisz /start i naciśnij „Połącz” jeszcze raz.");
+            return;
+        }
+        ed.putLong(Prefs.TG_CHAT, link.chatId);
+        if (link.nextOffset > 0) ed.putLong(Prefs.TG_OFFSET, link.nextOffset);
+        ed.apply();
+        setNote("Połączono z " + link.bot + (link.chatName.isEmpty() ? "" : ", czat: " + link.chatName)
+                + ". Powitanie poszło do Telegrama.");
+    }
+
+    private void onTgTest() {
+        saveSettings();
+        if (!Prefs.telegramReady(this)) {
+            toast("Najpierw połącz z botem: wklej token, napisz do bota /start i naciśnij „Połącz”.");
+            return;
+        }
+        final String token = Prefs.telegramToken(this);
+        final long chat = Prefs.telegramChat(this);
+        setNote("Wysyłam wiadomość testową…");
+        new Thread(() -> {
+            final Telegram.Reply r = Telegram.sendMessage(Telegram.DEFAULT_BASE, token, chat,
+                    "Test z Dzielnika. Odpowiedz na tę wiadomość z zegarka: jeśli nasłuch jest włączony, "
+                            + "Dzielnik zapyta Gemini i odeśle odpowiedź.", 15000, 30000);
+            handler.post(() -> setNote(r.ok()
+                    ? "Wiadomość testowa wysłana. Sprawdź telefon i zegarek."
+                    : r.error));
+        }, "dzielnik-test-telegram").start();
+    }
+
+    private void onTgListenChanged(boolean on) {
+        if (updatingSwitch) return;
+        if (!on) {
+            TelegramService.stop(this);
+            toast("Nasłuch wyłączony.");
+            return;
+        }
+        saveSettings();
+        if (!Prefs.telegramReady(this)) {
+            toast("Najpierw połącz z botem: wklej token, napisz do bota /start i naciśnij „Połącz”.");
+            setListenSwitch(false);
+        } else if (Prefs.geminiKey(this).isEmpty()) {
+            toast("Najpierw wklej klucz API Gemini.");
+            setListenSwitch(false);
+        } else if (!notificationsAllowed()) {
+            setListenSwitch(false);
+        } else if (TelegramService.start(this)) {
+            toast("Nasłuchuję pytań z Telegrama.");
+        } else {
+            toast("Nie udało się uruchomić nasłuchu. Spróbuj jeszcze raz przy otwartej aplikacji.");
+            setListenSwitch(false);
+        }
+    }
+
+    /** Prośba o zwolnienie Dzielnika z oszczędzania baterii; gdy się nie da, otwiera listę w ustawieniach. */
+    private void onBatterySettings() {
+        try {
+            startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + getPackageName())));
+        } catch (RuntimeException e) {
+            try {
+                startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+            } catch (RuntimeException e2) {
+                toast("Otwórz ręcznie: Ustawienia → Aplikacje → Dzielnik → Bateria → Bez ograniczeń.");
+            }
+        }
+    }
+
+    /** Pokazuje, czy bot jest połączony i czy nasłuch działa. */
+    private void updateTelegramState() {
+        if (!tgBusy && !tgNote.isEmpty() && System.currentTimeMillis() - tgNoteAt > 25000) tgNote = "";
+        String line;
+        if (!tgNote.isEmpty()) {
+            line = tgNote;
+        } else if (!Prefs.telegramReady(this)) {
+            line = "Nie połączono. Wklej token od @BotFather, napisz do bota /start i naciśnij „Połącz”.";
+        } else {
+            String bot = Prefs.get(this).getString(Prefs.TG_BOT, "");
+            line = "Połączono" + (bot.isEmpty() ? "" : " z " + bot) + ". ";
+            String st = TelegramService.status;
+            if (TelegramService.running) {
+                line += st.isEmpty() ? "Nasłuchuję." : st;
+            } else if (Prefs.telegramListen(this)) {
+                line += "Nasłuch jest włączony, ale usługa nie działa. Wyłącz go i włącz ponownie."
+                        + (st.isEmpty() ? "" : " " + st);
+            } else {
+                line += "Nasłuch wyłączony." + (st.isEmpty() ? "" : " " + st);
+            }
+        }
+        if (!line.contentEquals(tgStatus.getText())) tgStatus.setText(line);
+
+        boolean want = Prefs.telegramListen(this);
+        if (tgListen.isChecked() != want) setListenSwitch(want);
     }
 
     // ---------- pomiar ----------
@@ -351,6 +557,20 @@ public class MainActivity extends Activity {
         ed.putString(Prefs.GEMINI_MODEL, model);
         if (!model.equals(typedModel)) gemModel.setText(model);
         ed.putBoolean(Prefs.GEMINI_REPLY, replySwitch.isChecked());
+
+        // Nowy token to nowy bot: zapisany czat i numer wiadomości do niego nie pasują, nasłuch trzeba połączyć od nowa.
+        String token = Telegram.cleanToken(tgToken.getText().toString());
+        if (!token.equals(Prefs.telegramToken(this))) {
+            ed.putString(Prefs.TG_TOKEN, token);
+            ed.putLong(Prefs.TG_CHAT, 0);
+            ed.putString(Prefs.TG_BOT, "");
+            ed.putLong(Prefs.TG_OFFSET, 0);
+            ed.putBoolean(Prefs.TG_LISTEN, false);
+            if (TelegramService.running) TelegramService.stop(this);
+            if (!tgNote.isEmpty()) setNote("");
+        }
+        if (!token.equals(tgToken.getText().toString())) tgToken.setText(token);
+        ed.putInt(Prefs.DEST, selectedDest());
         ed.apply();
     }
 

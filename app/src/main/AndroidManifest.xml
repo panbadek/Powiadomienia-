@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Procesor nie zasypia na czas pytania do Gemini zadanego z Telegrama -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Prośba o zwolnienie z oszczędzania baterii, żeby nasłuch Telegrama działał przy wygaszonym ekranie -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Bez kopii zapasowej w chmurze: w ustawieniach leży klucz API Gemini. -->
     <application
@@ -39,6 +43,12 @@
         <!-- Pytania do Gemini: z pola w aplikacji i z przycisku „Odpowiedz” w powiadomieniu -->
         <service
             android:name=".GeminiService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Nasłuch Telegrama: odpowiedzi z zegarka trafiają do Gemini -->
+        <service
+            android:name=".TelegramService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
     </application>

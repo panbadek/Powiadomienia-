@@ -10,14 +10,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Zadaje pytania Gemini: z pola w aplikacji albo z przycisku „Odpowiedz” w powiadomieniu.
- * Odpowiedź dzieli tak samo jak wklejony tekst i wysyła jako kolejne powiadomienia.
+ * Resztę (odpowiedź, podział, wysłanie) robi Answerer; odpowiedź idzie tam, gdzie wybrał użytkownik:
+ * jako kolejne powiadomienia i/lub wiadomości w Telegramie.
  * Działa jako usługa pierwszoplanowa, więc kończy pracę też po wyjściu z aplikacji.
  */
 public class GeminiService extends Service {
@@ -132,51 +132,8 @@ public class GeminiService extends Service {
 
     private void handle(Job job) {
         refreshReplied(job);
-
-        String key = Prefs.geminiKey(this);
-        if (key.isEmpty()) {
-            fail("Brak klucza Gemini. Wpisz go w aplikacji Dzielnik, w sekcji Gemini.");
-            return;
-        }
-
         // Treść powiadomienia, na które odpowiadam, idzie do Gemini razem z moją odpowiedzią.
-        String userText = Gemini.compose(job.text, job.question);
-        List<Gemini.Turn> history = History.parse(Prefs.history(this));
-        Gemini.Result result = Gemini.ask(Gemini.DEFAULT_BASE, key, Prefs.geminiModel(this), Gemini.SYSTEM,
-                history, userText, 20000, 120000, new int[]{3000, 8000});
-        if (!result.ok()) {
-            fail(result.error);
-            return;
-        }
-        Prefs.setHistory(this, History.toJson(History.add(history, userText, result.text)));
-
-        List<String> parts = Splitter.split(result.text, Prefs.limit(this));
-        if (parts.isEmpty()) {
-            fail("Gemini zwróciło pustą odpowiedź.");
-            return;
-        }
-        status = "Wysyłam odpowiedź Gemini…";
-        // Nowa odpowiedź zastępuje poprzednią, żeby w panelu nie mieszały się części z dwóch odpowiedzi.
-        Notifier.cancelRange(this, Notifier.ID_GEMINI_BASE, Notifier.ID_GEMINI_END);
-        Notifier.manager(this).cancel(Notifier.ID_ERROR);
-        try {
-            Notifier.postParts(this, parts, "Gemini", false, Notifier.ID_GEMINI_BASE, Notifier.KIND_GEMINI,
-                    Prefs.delayMs(this), Prefs.reverse(this), new Notifier.Control() {
-                        @Override
-                        public boolean stopped() {
-                            return false;
-                        }
-
-                        @Override
-                        public void progress(int done, int total, String info) {
-                            if (info != null) status = info;
-                        }
-                    });
-            status = "Odpowiedź Gemini wysłana: " + parts.size() + " " + Notifier.powiadomien(parts.size()) + ".";
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            status = "Przerwano wysyłanie odpowiedzi Gemini.";
-        }
+        Answerer.answer(this, job.question, job.text, false);
     }
 
     /** Wysyła ponownie powiadomienie, na które odpowiedziano; dzięki temu znika „kręcące się kółko” przy polu odpowiedzi. */

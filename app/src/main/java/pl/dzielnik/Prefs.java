@@ -17,6 +17,12 @@ final class Prefs {
     static final String GEMINI_MODEL = "gemini_model";
     static final String GEMINI_REPLY = "gemini_reply";
     static final String GEMINI_HISTORY = "gemini_history";
+    static final String TG_TOKEN = "tg_token";
+    static final String TG_CHAT = "tg_chat";
+    static final String TG_BOT = "tg_bot";
+    static final String TG_LISTEN = "tg_listen";
+    static final String TG_OFFSET = "tg_offset";
+    static final String DEST = "dest";
 
     private Prefs() {}
 
@@ -69,5 +75,45 @@ final class Prefs {
 
     static void setHistory(Context c, String json) {
         get(c).edit().putString(GEMINI_HISTORY, json).apply();
+    }
+
+    // ---------- Telegram ----------
+
+    static String telegramToken(Context c) {
+        return get(c).getString(TG_TOKEN, "").trim();
+    }
+
+    /** Numer czatu z użytkownikiem; 0, gdy bot nie jest jeszcze połączony z żadnym czatem. */
+    static long telegramChat(Context c) {
+        return get(c).getLong(TG_CHAT, 0);
+    }
+
+    /** Telegram jest gotowy, gdy jest poprawny token i znany czat. */
+    static boolean telegramReady(Context c) {
+        return Telegram.validToken(telegramToken(c)) && telegramChat(c) != 0;
+    }
+
+    /** Czy użytkownik chce, żeby Dzielnik nasłuchiwał pytań z Telegrama. */
+    static boolean telegramListen(Context c) {
+        return get(c).getBoolean(TG_LISTEN, false);
+    }
+
+    static void setTelegramListen(Context c, boolean on) {
+        get(c).edit().putBoolean(TG_LISTEN, on).apply();
+    }
+
+    /** Od której aktualizacji nasłuchiwać (numer ostatniej przetworzonej + 1); 0 = od najstarszej. */
+    static long telegramOffset(Context c) {
+        return get(c).getLong(TG_OFFSET, 0);
+    }
+
+    /** Zapisuję od razu na dysk (commit): po zabiciu procesu wiadomość nie może wrócić drugi raz. */
+    static void setTelegramOffset(Context c, long next) {
+        get(c).edit().putLong(TG_OFFSET, next).commit();
+    }
+
+    /** Gdzie wysyłać części tekstu i odpowiedzi Gemini (Dest.NOTIFICATIONS, TELEGRAM albo BOTH). */
+    static int dest(Context c) {
+        return Dest.clean(get(c).getInt(DEST, Dest.NOTIFICATIONS));
     }
 }

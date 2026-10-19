@@ -19,12 +19,14 @@ final class Notifier {
     static final String CHANNEL_PARTS = "czesci";
     static final String CHANNEL_PROGRESS = "postep";
     static final String CHANNEL_ASK = "pytanie";
+    static final String CHANNEL_LISTEN = "nasluch";
 
     static final int ID_PROGRESS = 1;
     static final int ID_TEST = 2;
     static final int ID_ASK = 3;
     static final int ID_GEMINI_PROGRESS = 4;
     static final int ID_ERROR = 5;
+    static final int ID_LISTEN = 6;
     static final int ID_PART_BASE = 1000;
     static final int ID_GEMINI_BASE = 100000;
     static final int ID_GEMINI_END = 200000;
@@ -58,6 +60,8 @@ final class Notifier {
                 CHANNEL_PROGRESS, "Postęp wysyłania", NotificationManager.IMPORTANCE_LOW));
         nm.createNotificationChannel(new NotificationChannel(
                 CHANNEL_ASK, "Pole pytania do Gemini", NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel(
+                CHANNEL_LISTEN, "Nasłuchiwanie Telegrama", NotificationManager.IMPORTANCE_LOW));
     }
 
     /** Powiadomienie bez przycisku „Odpowiedz”. */
@@ -110,11 +114,15 @@ final class Notifier {
     }
 
     static void postError(Context c, String text) {
+        postError(c, "Gemini: coś poszło nie tak", text);
+    }
+
+    static void postError(Context c, String title, String text) {
         ensureChannels(c);
         Notification n = new Notification.Builder(c, CHANNEL_PARTS)
                 .setSmallIcon(R.drawable.ic_notif)
                 .setColor(c.getColor(R.color.danger))
-                .setContentTitle("Gemini: coś poszło nie tak")
+                .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setAutoCancel(true)
@@ -162,6 +170,10 @@ final class Notifier {
     /** Powiadomienie testowe do mierzenia długości. */
     static void postTest(Context c, int length) {
         post(c, ID_TEST, "Test długości (" + length + " zn.)", Measure.generate(length));
+    }
+
+    static String wiadomosci(int n) {
+        return n == 1 ? "wiadomość" : "wiadomości";
     }
 
     static String powiadomien(int n) {
