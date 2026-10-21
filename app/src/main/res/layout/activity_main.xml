@@ -23,7 +23,7 @@
             <ImageView
                 android:layout_width="52dp"
                 android:layout_height="52dp"
-                android:contentDescription="Ikona Dzielnika"
+                android:contentDescription="Ikona aplikacji"
                 android:src="@drawable/ic_logo" />
 
             <LinearLayout
@@ -36,7 +36,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Dzielnik"
+                    android:text="Powiadomienia"
                     android:textColor="@color/text_primary"
                     android:textSize="26sp"
                     android:textStyle="bold" />
@@ -372,7 +372,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Zegarek Huawei pozwala odpowiadać na powiadomienia tylko z wybranych komunikatorów, m.in. z Telegrama, więc powiadomienia Dzielnika nie dostaną na nim przycisku odpowiedzi. Dzielnik może za to pisać do Ciebie przez własnego bota w Telegramie. Odpowiadasz na zegarku, odpowiedź idzie do Gemini i wraca jako kolejna wiadomość." />
+                android:text="Zegarek Huawei pozwala odpowiadać na powiadomienia tylko z wybranych komunikatorów, m.in. z Telegrama, więc powiadomienia tej aplikacji nie dostaną na nim przycisku odpowiedzi. Aplikacja może za to pisać do Ciebie przez własnego bota w Telegramie. Odpowiadasz na zegarku, odpowiedź idzie do Gemini i wraca jako kolejna wiadomość." />
 
             <TextView
                 style="@style/Hint"
@@ -436,7 +436,7 @@
                 style="@style/Hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Nasłuch działa w tle z ikoną w pasku powiadomień. Po ponownym uruchomieniu telefonu otwórz Dzielnika, a włączy się sam. Żeby odpowiedź z zegarka dochodziła też przy wygaszonym ekranie, pozwól Dzielnikowi pracować bez ograniczeń baterii." />
+                android:text="Nasłuch działa w tle z ikoną w pasku powiadomień. Po ponownym uruchomieniu telefonu otwórz aplikację, a nasłuch włączy się sam. Żeby odpowiedź z zegarka dochodziła też przy wygaszonym ekranie, pozwól aplikacji pracować bez ograniczeń baterii." />
 
             <Button
                 android:id="@+id/btn_battery"
@@ -465,7 +465,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minHeight="44dp"
-                    android:text="Powiadomienia Dzielnika"
+                    android:text="Powiadomienia w telefonie"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp" />
 
@@ -492,7 +492,7 @@
                 style="@style/Hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Odpowiedź na pytanie zadane z Telegrama wraca do Telegrama. Wybór „Oba” dodaje do tego powiadomienia Dzielnika. Bez połączonego bota wszystko idzie jak dotąd, w powiadomieniach." />
+                android:text="Odpowiedź na pytanie zadane z Telegrama wraca do Telegrama. Wybór „Oba” dodaje do tego zwykłe powiadomienia w telefonie. Bez połączonego bota wszystko idzie jak dotąd, w powiadomieniach." />
 
             <Button
                 android:id="@+id/btn_tg_test"

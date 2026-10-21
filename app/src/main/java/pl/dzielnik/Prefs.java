@@ -93,7 +93,7 @@ final class Prefs {
         return Telegram.validToken(telegramToken(c)) && telegramChat(c) != 0;
     }
 
-    /** Czy użytkownik chce, żeby Dzielnik nasłuchiwał pytań z Telegrama. */
+    /** Czy użytkownik chce, żeby aplikacja nasłuchiwała pytań z Telegrama. */
     static boolean telegramListen(Context c) {
         return get(c).getBoolean(TG_LISTEN, false);
     }

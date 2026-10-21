@@ -10,8 +10,10 @@ import java.util.List;
  * - zdanie kończy się kropką (także ! lub ?), a następne zaczyna się od wielkiej litery,
  * - cięcie następuje tylko między zdaniami,
  * - zdanie, które nie mieści się w bieżącej części, trafia w całości do następnej,
- * - zdanie dłuższe niż limit dzielę po słowach (gdy brak spacji, w dowolnym miejscu),
- *   żeby cały tekst został wysłany.
+ * - zdanie dłuższe niż limit dzielę po wierszach (listy, nagłówki i wiersze wierszy zwykle nie mają kropek,
+ *   więc cały taki tekst jest jednym „zdaniem”): każdy wiersz trafia do jednej części w całości,
+ * - wiersz (albo zdanie bez końców wierszy) dłuższy niż limit dzielę po słowach (gdy brak spacji,
+ *   w dowolnym miejscu), żeby cały tekst został wysłany.
  *
  * Klasa nie korzysta z niczego z Androida, więc da się ją testować zwykłą Javą.
  */
@@ -33,7 +35,7 @@ public final class Splitter {
         List<int[]> units = new ArrayList<>();
         for (int[] s : sentenceSpans(t)) {
             if (s[1] - s[0] <= limit) units.add(new int[]{s[0], s[1], 0});
-            else wrap(t, s[0], s[1], limit, units);
+            else splitLong(t, s[0], s[1], limit, units);
         }
 
         int cs = -1, ce = -1;
@@ -88,7 +90,29 @@ public final class Splitter {
         return r;
     }
 
-    /** Dzieli zdanie dłuższe niż limit na kawałki po słowach. */
+    /**
+     * Dzieli zdanie dłuższe niż limit. Jednostkami są jego wiersze (bez białych znaków na brzegach, puste pomijam),
+     * dzięki czemu lista „Maroko – Rabat / Algieria – Algier / …” nie zostanie przecięta w środku wpisu.
+     * Wiersz mieszczący się w limicie może dołączyć do poprzedniego, a wiersz dłuższy niż limit dzielę po słowach.
+     * Zdanie bez końców wierszy jest jednym wierszem, więc trafia od razu do {@link #wrap}.
+     */
+    private static void splitLong(String t, int s, int e, int limit, List<int[]> units) {
+        int p = s;
+        while (p < e) {
+            int q = p;
+            while (q < e && t.charAt(q) != '\n') q++;
+            int a = p, b = q;
+            while (a < b && ws(t.charAt(a))) a++;
+            while (b > a && ws(t.charAt(b - 1))) b--;
+            if (b > a) {
+                if (b - a <= limit) units.add(new int[]{a, b, 0});
+                else wrap(t, a, b, limit, units);
+            }
+            p = q + 1;
+        }
+    }
+
+    /** Dzieli tekst dłuższy niż limit (jeden wiersz) na kawałki po słowach. */
     private static void wrap(String t, int s, int e, int limit, List<int[]> units) {
         int p = s;
         while (p < e) {

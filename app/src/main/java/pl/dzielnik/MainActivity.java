@@ -379,8 +379,8 @@ public class MainActivity extends Activity {
         setNote("Wysyłam wiadomość testową…");
         new Thread(() -> {
             final Telegram.Reply r = Telegram.sendMessage(Telegram.DEFAULT_BASE, token, chat,
-                    "Test z Dzielnika. Odpowiedz na tę wiadomość z zegarka: jeśli nasłuch jest włączony, "
-                            + "Dzielnik zapyta Gemini i odeśle odpowiedź.", 15000, 30000);
+                    "Test z aplikacji Powiadomienia. Odpowiedz na tę wiadomość z zegarka: jeśli nasłuch jest włączony, "
+                            + "aplikacja zapyta Gemini i odeśle odpowiedź.", 15000, 30000);
             handler.post(() -> setNote(r.ok()
                     ? "Wiadomość testowa wysłana. Sprawdź telefon i zegarek."
                     : r.error));
@@ -411,7 +411,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Prośba o zwolnienie Dzielnika z oszczędzania baterii; gdy się nie da, otwiera listę w ustawieniach. */
+    /** Prośba o zwolnienie aplikacji z oszczędzania baterii; gdy się nie da, otwiera listę w ustawieniach. */
     private void onBatterySettings() {
         try {
             startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
@@ -420,7 +420,7 @@ public class MainActivity extends Activity {
             try {
                 startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
             } catch (RuntimeException e2) {
-                toast("Otwórz ręcznie: Ustawienia → Aplikacje → Dzielnik → Bateria → Bez ograniczeń.");
+                toast("Otwórz ręcznie: Ustawienia → Aplikacje → Powiadomienia → Bateria → Bez ograniczeń.");
             }
         }
     }
@@ -531,7 +531,7 @@ public class MainActivity extends Activity {
     private boolean notificationsAllowed() {
         if (Notifier.manager(this).areNotificationsEnabled()) return true;
         askNotificationPermission();
-        toast("Zezwól aplikacji na powiadomienia (Ustawienia → Aplikacje → Dzielnik) i spróbuj jeszcze raz.");
+        toast("Zezwól aplikacji na powiadomienia (Ustawienia → Aplikacje → Powiadomienia) i spróbuj jeszcze raz.");
         return false;
     }
 

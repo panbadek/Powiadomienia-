@@ -20,9 +20,9 @@ import java.util.regex.Pattern;
  * Rozmowa z Telegramem przez Bot API: odbieranie wiadomości (getUpdates) i wysyłanie (sendMessage).
  * Czysta Java, bez Androida, dzięki temu cały obieg da się sprawdzić na sztucznym serwerze HTTP.
  *
- * Po co to w Dzielniku: zegarek Huawei pozwala odpowiadać na powiadomienia tylko z wybranych
+ * Po co to w aplikacji: zegarek Huawei pozwala odpowiadać na powiadomienia tylko z wybranych
  * komunikatorów, a Telegram jest wśród nich. Części tekstu i odpowiedzi Gemini mogą więc iść jako
- * wiadomości od bota, a odpowiedź napisana na zegarku wraca do Dzielnika jako wiadomość do bota.
+ * wiadomości od bota, a odpowiedź napisana na zegarku wraca do aplikacji jako wiadomość do bota.
  */
 final class Telegram {
 
@@ -35,7 +35,7 @@ final class Telegram {
     /** Część dłuższa niż to jest dzielona dalej; zostaje zapas na numer części w pierwszej linii. */
     static final int PART_LIMIT = 3900;
 
-    static final String GREETING = "Połączono z Dzielnikiem. Napisz tu pytanie, a Dzielnik zapyta Gemini i odeśle "
+    static final String GREETING = "Połączono z aplikacją Powiadomienia. Napisz tu pytanie, a zapytam Gemini i odeślę "
             + "odpowiedź. Komenda /nowa zaczyna nową rozmowę.";
 
     private static final int MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
@@ -407,7 +407,7 @@ final class Telegram {
                 return "Telegram nie zna takiego bota (404). Sprawdź token.";
             case 409:
                 if (low.contains("webhook")) {
-                    return "Ten bot ma ustawiony webhook, więc Dzielnik nie może odbierać jego wiadomości (409). "
+                    return "Ten bot ma ustawiony webhook, więc aplikacja nie może odbierać jego wiadomości (409). "
                             + "Utwórz nowego bota w @BotFather.";
                 }
                 return "Ten bot jest już odbierany przez inny program albo drugą kopię aplikacji (409). "

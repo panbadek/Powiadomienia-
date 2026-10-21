@@ -1,7 +1,7 @@
 package pl.dzielnik;
 
 /**
- * Gdzie wysyłać części tekstu i odpowiedzi Gemini: powiadomienia Dzielnika, Telegram albo jedno i drugie.
+ * Gdzie wysyłać części tekstu i odpowiedzi Gemini: powiadomienia w telefonie, Telegram albo jedno i drugie.
  * Czysta Java, żeby tabelę wyborów dało się sprawdzić testem.
  */
 final class Dest {

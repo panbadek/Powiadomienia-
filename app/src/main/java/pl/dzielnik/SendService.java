@@ -161,7 +161,7 @@ public class SendService extends Service {
                 .setSmallIcon(R.drawable.ic_notif)
                 .setColor(getColor(R.color.accent))
                 .setContentTitle("Wysłano " + done + " z " + total)
-                .setContentText(info == null ? "Dzielnik wysyła tekst" : info)
+                .setContentText(info == null ? "Wysyłam tekst w powiadomieniach" : info)
                 .setProgress(total, done, false)
                 .setOngoing(true)
                 .addAction(stopAction)

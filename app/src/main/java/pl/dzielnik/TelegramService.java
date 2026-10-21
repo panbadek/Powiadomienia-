@@ -16,7 +16,7 @@ import android.os.PowerManager;
  * wiadomości od bota trafia tu, idzie do Gemini, a odpowiedź Gemini wraca do Telegrama.
  *
  * Działa jako usługa pierwszoplanowa (z ikoną w pasku powiadomień), dzięki temu system nie zabija jej
- * po wyjściu z aplikacji. Przy ponownym uruchomieniu telefonu trzeba raz otworzyć Dzielnika.
+ * po wyjściu z aplikacji. Przy ponownym uruchomieniu telefonu trzeba raz otworzyć aplikację.
  */
 public class TelegramService extends Service {
 
@@ -79,7 +79,7 @@ public class TelegramService extends Service {
         } catch (RuntimeException e) {
             // System nie pozwolił na usługę pierwszoplanową (np. start z tła po zabiciu procesu).
             running = false;
-            status = "System nie pozwolił uruchomić nasłuchu w tle. Otwórz Dzielnika, żeby uruchomić go ponownie.";
+            status = "System nie pozwolił uruchomić nasłuchu w tle. Otwórz aplikację, żeby uruchomić go ponownie.";
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -194,7 +194,7 @@ public class TelegramService extends Service {
             case "start":
             case "pomoc":
             case "help":
-                reply("Napisz pytanie, a Dzielnik zapyta Gemini i odeśle odpowiedź. Komenda /nowa zaczyna nową rozmowę.");
+                reply("Napisz pytanie, a zapytam Gemini i odeślę odpowiedź. Komenda /nowa zaczyna nową rozmowę.");
                 break;
             case "nowa":
                 Answerer.newChat(this);
@@ -221,7 +221,7 @@ public class TelegramService extends Service {
         return new Notification.Builder(this, Notifier.CHANNEL_LISTEN)
                 .setSmallIcon(R.drawable.ic_notif)
                 .setColor(getColor(R.color.accent))
-                .setContentTitle("Dzielnik nasłuchuje Telegrama")
+                .setContentTitle("Nasłuch Telegrama włączony")
                 .setContentText("Odpowiedzi z zegarka trafiają do Gemini.")
                 .setContentIntent(open)
                 .setOngoing(true)
@@ -231,7 +231,7 @@ public class TelegramService extends Service {
 
     /**
      * Android 15 i nowszy mogą zakończyć usługę typu dataSync po 6 godzinach pracy w ciągu doby (dotyczy aplikacji
-     * zbudowanych na API 35 i wyżej, a Dzielnik jest na API 34, więc zwykle do tego nie dochodzi). Gdyby jednak do tego
+     * zbudowanych na API 35 i wyżej, a ta aplikacja jest na API 34, więc zwykle do tego nie dochodzi). Gdyby jednak do tego
      * doszło, usługa ma kilka sekund na zatrzymanie się, inaczej system wywraca aplikację. Ustawienie „nasłuchuj”
      * zostaje, więc po otwarciu aplikacji nasłuch włączy się sam.
      * Metoda nie ma @Override, bo istnieje dopiero w API 35, a aplikacja jest budowana na API 34.
@@ -240,7 +240,7 @@ public class TelegramService extends Service {
         stopRequested = true;
         if (worker != null) worker.interrupt();
         running = false;
-        status = "System zatrzymał nasłuch po wielu godzinach pracy w tle. Otwórz Dzielnika, żeby włączyć go ponownie.";
+        status = "System zatrzymał nasłuch po wielu godzinach pracy w tle. Otwórz aplikację, żeby włączyć go ponownie.";
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }

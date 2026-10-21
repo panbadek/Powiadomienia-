@@ -46,7 +46,7 @@ final class Answerer {
     private static void ask(Context c, String question, String quoted, boolean fromTelegram) {
         String key = Prefs.geminiKey(c);
         if (key.isEmpty()) {
-            fail(c, "Brak klucza Gemini. Wpisz go w aplikacji Dzielnik, w sekcji Gemini.", fromTelegram);
+            fail(c, "Brak klucza Gemini. Wpisz go w aplikacji Powiadomienia, w sekcji Gemini.", fromTelegram);
             return;
         }
         GeminiService.status = "Pytam Gemini…";

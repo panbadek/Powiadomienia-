@@ -92,7 +92,7 @@ final class Gemini {
     static Result ask(String baseUrl, String apiKey, String model, String system, List<Turn> history,
                       String userText, int connectMs, int readMs, int[] retryDelaysMs) {
         String key = apiKey == null ? "" : apiKey.trim();
-        if (key.isEmpty()) return Result.fail("Brak klucza API Gemini. Wpisz go w aplikacji Dzielnik.", 0);
+        if (key.isEmpty()) return Result.fail("Brak klucza API Gemini. Wpisz go w aplikacji Powiadomienia.", 0);
         String url = baseUrl + "/v1beta/models/" + cleanModel(model) + ":generateContent";
         byte[] body = buildRequest(system, history, userText).getBytes(StandardCharsets.UTF_8);
         for (int attempt = 0; ; attempt++) {
