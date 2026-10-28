@@ -31,7 +31,20 @@ final class Answerer {
      */
     static void answer(Context c, String question, String quoted, boolean fromTelegram) {
         synchronized (QUESTION_LOCK) {
-            ask(c, question, quoted, fromTelegram);
+            // Treść wiadomości, na którą odpowiadam, idzie do Gemini razem z moją odpowiedzią.
+            String userText = Gemini.compose(quoted, question);
+            ask(c, userText, userText, null, fromTelegram);
+        }
+    }
+
+    /**
+     * Pytanie ze zdjęciem: zdjęcie (JPEG) idzie do Gemini razem z pytaniem, a odpowiedź jest dzielona i wysyłana
+     * tak samo jak każda inna, według bieżących ustawień (długość części, przerwa, kolejność, miejsce wysłania).
+     * W pamięci rozmowy zostaje samo pytanie ze znacznikiem „[Zdjęcie]” i odpowiedź Gemini.
+     */
+    static void answerPhoto(Context c, String prompt, byte[] jpeg) {
+        synchronized (QUESTION_LOCK) {
+            ask(c, prompt, Gemini.composePhoto(prompt), jpeg, false);
         }
     }
 
@@ -43,16 +56,20 @@ final class Answerer {
         }
     }
 
-    private static void ask(Context c, String question, String quoted, boolean fromTelegram) {
+    /**
+     * @param userText    to, co idzie do Gemini jako pytanie
+     * @param historyText to, co o tym pytaniu zapamiętuje rozmowa (dla zdjęcia sam znacznik i pytanie)
+     * @param jpeg        zdjęcie dołączone do pytania albo null
+     */
+    private static void ask(Context c, String userText, String historyText, byte[] jpeg, boolean fromTelegram) {
+        GeminiService.statusIsPhoto = jpeg != null;
         String key = Prefs.geminiKey(c);
         if (key.isEmpty()) {
             fail(c, "Brak klucza Gemini. Wpisz go w aplikacji Powiadomienia, w sekcji Gemini.", fromTelegram);
             return;
         }
-        GeminiService.status = "Pytam Gemini…";
+        GeminiService.status = jpeg != null ? "Wysyłam zdjęcie do Gemini…" : "Pytam Gemini…";
 
-        // Treść wiadomości, na którą odpowiadam, idzie do Gemini razem z moją odpowiedzią.
-        String userText = Gemini.compose(quoted, question);
         int startedIn;
         List<Gemini.Turn> history;
         synchronized (HISTORY_LOCK) {
@@ -60,14 +77,14 @@ final class Answerer {
             history = History.parse(Prefs.history(c));
         }
         Gemini.Result result = Gemini.ask(Gemini.DEFAULT_BASE, key, Prefs.geminiModel(c), Gemini.SYSTEM,
-                history, userText, 20000, 120000, new int[]{3000, 8000});
+                history, userText, jpeg, 20000, 120000, new int[]{3000, 8000});
         if (!result.ok()) {
             fail(c, result.error, fromTelegram);
             return;
         }
         synchronized (HISTORY_LOCK) {
             if (startedIn == generation) {
-                Prefs.setHistory(c, History.toJson(History.add(history, userText, result.text)));
+                Prefs.setHistory(c, History.toJson(History.add(history, historyText, result.text)));
             }
         }
 

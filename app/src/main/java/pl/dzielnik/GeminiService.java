@@ -15,14 +15,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Zadaje pytania Gemini: z pola w aplikacji albo z przycisku „Odpowiedz” w powiadomieniu.
- * Resztę (odpowiedź, podział, wysłanie) robi Answerer; odpowiedź idzie tam, gdzie wybrał użytkownik:
- * jako kolejne powiadomienia i/lub wiadomości w Telegramie.
+ * Zadaje pytania Gemini: z pola w aplikacji, z przycisku „Odpowiedz” w powiadomieniu albo ze zdjęciem
+ * zrobionym aparatem. Resztę (odpowiedź, podział, wysłanie) robi Answerer; odpowiedź idzie tam, gdzie wybrał
+ * użytkownik: jako kolejne powiadomienia i/lub wiadomości w Telegramie.
  * Działa jako usługa pierwszoplanowa, więc kończy pracę też po wyjściu z aplikacji.
  */
 public class GeminiService extends Service {
 
     static final String ACTION_ASK = "pl.dzielnik.ASK";
+    /** Pytanie ze zdjęciem; nazwa pliku w EXTRA_PHOTO, pytanie w EXTRA_QUESTION. */
+    static final String ACTION_PHOTO = "pl.dzielnik.PHOTO";
     /** Klucz pola odpowiedzi w powiadomieniu (RemoteInput). */
     static final String KEY_REPLY = "odpowiedz";
     static final String EXTRA_QUESTION = "pytanie";
@@ -31,11 +33,15 @@ public class GeminiService extends Service {
     static final String EXTRA_TEXT = "tresc";
     static final String EXTRA_KIND = "rodzaj";
     static final String EXTRA_WHEN = "kiedy";
+    static final String EXTRA_PHOTO = "zdjecie";
 
     private static final int MAX_QUESTION = 8000;
 
     /** Ostatni komunikat o pytaniu, pokazywany na ekranie aplikacji. */
     static volatile String status = "";
+
+    /** Czy ostatni komunikat dotyczy pytania ze zdjęciem; ekran pokazuje go wtedy w sekcji zdjęcia. */
+    static volatile boolean statusIsPhoto;
 
     /** Jedna rozmowa: pytania obsługuję po kolei, żeby pamięć rozmowy się nie rozjechała. */
     private static final ExecutorService QUEUE = Executors.newSingleThreadExecutor(r -> {
@@ -54,14 +60,17 @@ public class GeminiService extends Service {
         final String title;
         final String text;
         final long when;
+        /** Nazwa pliku ze zdjęciem z aparatu albo null, gdy to zwykłe pytanie. */
+        final String photo;
 
-        Job(String question, String kind, int id, String title, String text, long when) {
+        Job(String question, String kind, int id, String title, String text, long when, String photo) {
             this.question = question;
             this.kind = kind;
             this.id = id;
             this.title = title;
             this.text = text;
             this.when = when;
+            this.photo = photo;
         }
     }
 
@@ -71,6 +80,19 @@ public class GeminiService extends Service {
             c.startForegroundService(new Intent(c, GeminiService.class)
                     .setAction(ACTION_ASK)
                     .putExtra(EXTRA_QUESTION, question));
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** Zdjęcie zrobione aparatem (plik w pamięci podręcznej aplikacji) razem z pytaniem do niego. */
+    static boolean startPhoto(Context c, String question, String file) {
+        try {
+            c.startForegroundService(new Intent(c, GeminiService.class)
+                    .setAction(ACTION_PHOTO)
+                    .putExtra(EXTRA_QUESTION, question)
+                    .putExtra(EXTRA_PHOTO, file));
             return true;
         } catch (RuntimeException e) {
             return false;
@@ -97,7 +119,8 @@ public class GeminiService extends Service {
             if (waiting.get() == 0) stopSelf(startId);
             return START_NOT_STICKY;
         }
-        status = "Pytam Gemini…";
+        statusIsPhoto = job.photo != null;
+        status = job.photo != null ? "Przygotowuję zdjęcie…" : "Pytam Gemini…";
         waiting.incrementAndGet();
         QUEUE.execute(() -> {
             try {
@@ -113,6 +136,7 @@ public class GeminiService extends Service {
 
     private Job readJob(Intent intent) {
         if (intent == null) return null;
+        if (ACTION_PHOTO.equals(intent.getAction())) return readPhotoJob(intent);
         String question = null;
         Bundle results = RemoteInput.getResultsFromIntent(intent);
         if (results != null) {
@@ -127,13 +151,38 @@ public class GeminiService extends Service {
 
         String text = intent.getStringExtra(EXTRA_TEXT);
         return new Job(question, intent.getStringExtra(EXTRA_KIND), intent.getIntExtra(EXTRA_ID, 0),
-                intent.getStringExtra(EXTRA_TITLE), text == null ? "" : text, intent.getLongExtra(EXTRA_WHEN, 0));
+                intent.getStringExtra(EXTRA_TITLE), text == null ? "" : text, intent.getLongExtra(EXTRA_WHEN, 0), null);
+    }
+
+    /** Zdjęcie bez pytania dostaje pytanie domyślne; nazwa pliku musi być taką, jaką sama nadaję zdjęciom. */
+    private Job readPhotoJob(Intent intent) {
+        String file = intent.getStringExtra(EXTRA_PHOTO);
+        if (!PhotoMath.validName(file)) return null;
+        String question = Gemini.photoPrompt(intent.getStringExtra(EXTRA_QUESTION), MAX_QUESTION);
+        return new Job(question, null, 0, null, "", 0, file);
     }
 
     private void handle(Job job) {
+        if (job.photo != null) {
+            handlePhoto(job);
+            return;
+        }
+        statusIsPhoto = false;
         refreshReplied(job);
         // Treść powiadomienia, na które odpowiadam, idzie do Gemini razem z moją odpowiedzią.
         Answerer.answer(this, job.question, job.text, false);
+    }
+
+    /** Przygotowuję zdjęcie (zmniejszenie, obrót) tutaj, w tle, a nie na ekranie, który by się na ten czas zawiesił. */
+    private void handlePhoto(Job job) {
+        statusIsPhoto = true;
+        status = "Przygotowuję zdjęcie…";
+        Photo.Prepared photo = Photo.prepare(this, job.photo);
+        if (photo.error != null) {
+            fail(photo.error);
+            return;
+        }
+        Answerer.answerPhoto(this, job.question, photo.jpeg);
     }
 
     /** Wysyła ponownie powiadomienie, na które odpowiedziano; dzięki temu znika „kręcące się kółko” przy polu odpowiedzi. */

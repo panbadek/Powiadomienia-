@@ -23,6 +23,8 @@ final class Prefs {
     static final String TG_LISTEN = "tg_listen";
     static final String TG_OFFSET = "tg_offset";
     static final String DEST = "dest";
+    static final String PHOTO_PROMPT = "photo_prompt";
+    static final String PHOTO_FILE = "photo_file";
 
     private Prefs() {}
 
@@ -75,6 +77,30 @@ final class Prefs {
 
     static void setHistory(Context c, String json) {
         get(c).edit().putString(GEMINI_HISTORY, json).apply();
+    }
+
+    // ---------- Zdjęcie ----------
+
+    /** Pytanie do zdjęcia z ekranu aplikacji. Zostaje w polu po zrobieniu zdjęcia, bo często powtarza się przy kolejnych. */
+    static String photoPrompt(Context c) {
+        return get(c).getString(PHOTO_PROMPT, "");
+    }
+
+    /** Nazwa pliku, w którym aparat właśnie zapisuje zdjęcie; pusta, gdy żadne zdjęcie nie czeka na aparat. */
+    static String photoFile(Context c) {
+        return get(c).getString(PHOTO_FILE, "");
+    }
+
+    /**
+     * Zapisuję od razu na dysk (commit): aparat potrafi wyprzeć aplikację z pamięci, a po powrocie ekran
+     * odtwarza się od zera i musi wiedzieć, które zdjęcie przyszło i z jakim pytaniem.
+     */
+    static void setPhotoPending(Context c, String file, String prompt) {
+        get(c).edit().putString(PHOTO_FILE, file).putString(PHOTO_PROMPT, prompt).commit();
+    }
+
+    static void clearPhotoPending(Context c) {
+        get(c).edit().putString(PHOTO_FILE, "").commit();
     }
 
     // ---------- Telegram ----------

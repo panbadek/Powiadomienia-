@@ -10,7 +10,7 @@ import java.util.List;
  * - zdanie kończy się kropką (także ! lub ?), a następne zaczyna się od wielkiej litery,
  * - cięcie następuje tylko między zdaniami,
  * - zdanie, które nie mieści się w bieżącej części, trafia w całości do następnej,
- * - zdanie dłuższe niż limit dzielę po wierszach (listy, nagłówki i wiersze wierszy zwykle nie mają kropek,
+ * - zdanie dłuższe niż limit dzielę po wierszach (listy, nagłówki i wersy wierszy zwykle nie mają kropek,
  *   więc cały taki tekst jest jednym „zdaniem”): każdy wiersz trafia do jednej części w całości,
  * - wiersz (albo zdanie bez końców wierszy) dłuższy niż limit dzielę po słowach (gdy brak spacji,
  *   w dowolnym miejscu), żeby cały tekst został wysłany.

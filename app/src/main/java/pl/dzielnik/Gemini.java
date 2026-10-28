@@ -9,6 +9,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +33,18 @@ final class Gemini {
             + "Listy zapisuj jako zwykłe zdania.";
 
     private static final int MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+    /** Zdjęcie idzie do Gemini jako JPEG zapisany w samym zapytaniu (bez wgrywania osobnego pliku). */
+    static final String IMAGE_MIME = "image/jpeg";
+
+    /**
+     * Całe zapytanie może mieć najwyżej 20 MB, a zdjęcie w base64 jest o jedną trzecią większe od pliku.
+     * Zdjęcie z aplikacji ma zwykle poniżej 1 MB; ten limit tylko pilnuje, żeby nic absurdalnego nie poszło w sieć.
+     */
+    static final int MAX_IMAGE_BYTES = 14 * 1024 * 1024;
+
+    /** Pytanie do zdjęcia, gdy użytkownik zostawił pole puste. */
+    static final String DEFAULT_PHOTO_PROMPT = "Opisz, co jest na tym zdjęciu.";
 
     private Gemini() {}
 
@@ -81,6 +94,26 @@ final class Gemini {
         return "Odpowiadam na powiadomienie o treści:\n\"\"\"\n" + n + "\n\"\"\"\n\nMoja odpowiedź:\n" + r;
     }
 
+    /** Pytanie do zdjęcia: przycięte, a gdy puste, zastąpione domyślnym. Nie dzieli pary zastępczej (emoji). */
+    static String photoPrompt(String raw, int max) {
+        String p = raw == null ? "" : raw.trim();
+        if (p.isEmpty()) return DEFAULT_PHOTO_PROMPT;
+        if (p.length() > max) {
+            int end = max;
+            if (Character.isHighSurrogate(p.charAt(end - 1))) end--;
+            p = p.substring(0, end).trim();
+        }
+        return p.isEmpty() ? DEFAULT_PHOTO_PROMPT : p;
+    }
+
+    /**
+     * Tak pytanie ze zdjęciem zapisuje się w pamięci rozmowy. Samego zdjęcia tam nie ma (jest za duże), więc
+     * kolejne pytania widzą znacznik i odpowiedź Gemini, w której jest opis tego, co było na zdjęciu.
+     */
+    static String composePhoto(String prompt) {
+        return "[Zdjęcie] " + (prompt == null ? "" : prompt.trim());
+    }
+
     /** Nazwa modelu bez przedrostka „models/” i bez spacji. Przy błędnej wartości wraca model domyślny. */
     static String cleanModel(String raw) {
         String m = raw == null ? "" : raw.trim();
@@ -91,10 +124,19 @@ final class Gemini {
     /** Pytanie z całą dotychczasową rozmową. Przy chwilowych błędach ponawia po podanych przerwach. */
     static Result ask(String baseUrl, String apiKey, String model, String system, List<Turn> history,
                       String userText, int connectMs, int readMs, int[] retryDelaysMs) {
+        return ask(baseUrl, apiKey, model, system, history, userText, null, connectMs, readMs, retryDelaysMs);
+    }
+
+    /** To samo, ale z jednym zdjęciem (JPEG) dołączonym do pytania; null oznacza samo pytanie. */
+    static Result ask(String baseUrl, String apiKey, String model, String system, List<Turn> history,
+                      String userText, byte[] jpeg, int connectMs, int readMs, int[] retryDelaysMs) {
         String key = apiKey == null ? "" : apiKey.trim();
         if (key.isEmpty()) return Result.fail("Brak klucza API Gemini. Wpisz go w aplikacji Powiadomienia.", 0);
+        if (jpeg != null && jpeg.length > MAX_IMAGE_BYTES) {
+            return Result.fail("Zdjęcie jest za duże, żeby wysłać je do Gemini.", 0);
+        }
         String url = baseUrl + "/v1beta/models/" + cleanModel(model) + ":generateContent";
-        byte[] body = buildRequest(system, history, userText).getBytes(StandardCharsets.UTF_8);
+        byte[] body = buildRequest(system, history, userText, jpeg).getBytes(StandardCharsets.UTF_8);
         for (int attempt = 0; ; attempt++) {
             Result r;
             try {
@@ -117,6 +159,14 @@ final class Gemini {
     }
 
     static String buildRequest(String system, List<Turn> history, String userText) {
+        return buildRequest(system, history, userText, null);
+    }
+
+    /**
+     * Zapytanie generateContent. Zdjęcie (jeśli jest) idzie w tej samej wypowiedzi co pytanie i przed nim:
+     * przy jednym obrazie Google zaleca, żeby tekst stał po obrazie.
+     */
+    static String buildRequest(String system, List<Turn> history, String userText, byte[] jpeg) {
         StringBuilder b = new StringBuilder();
         b.append('{');
         if (system != null && !system.isEmpty()) {
@@ -128,7 +178,12 @@ final class Gemini {
             b.append("{\"role\":\"").append(role).append("\",\"parts\":[{\"text\":")
                     .append(Json.quote(t.text)).append("}]},");
         }
-        b.append("{\"role\":\"user\",\"parts\":[{\"text\":").append(Json.quote(userText)).append("}]}");
+        b.append("{\"role\":\"user\",\"parts\":[");
+        if (jpeg != null) {
+            b.append("{\"inline_data\":{\"mime_type\":\"").append(IMAGE_MIME).append("\",\"data\":\"")
+                    .append(Base64.getEncoder().encodeToString(jpeg)).append("\"}},");
+        }
+        b.append("{\"text\":").append(Json.quote(userText)).append("}]}");
         return b.append("]}").toString();
     }
 

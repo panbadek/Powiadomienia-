@@ -46,6 +46,14 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Miejsce na jedno zdjęcie dla aparatu telefonu. Nie jest dostępne dla innych aplikacji: aparat dostaje
+             od systemu prawo zapisu do jednego adresu i tylko na czas robienia zdjęcia. -->
+        <provider
+            android:name=".PhotoProvider"
+            android:authorities="pl.dzielnik.zdjecia"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+
         <!-- Nasłuch Telegrama: odpowiedzi z zegarka trafiają do Gemini -->
         <service
             android:name=".TelegramService"

@@ -354,6 +354,66 @@
                 android:text="Zacznij nową rozmowę" />
         </LinearLayout>
 
+        <!-- Zdjęcie do Gemini -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Zdjęcie do Gemini" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Zrób zdjęcie aparatem telefonu. Trafia ono do Gemini razem z pytaniem poniżej, a odpowiedź jest dzielona i wysyłana tak samo jak inne odpowiedzi Gemini: według długości części, przerwy, kolejności i miejsca wysyłania." />
+
+            <EditText
+                android:id="@+id/photo_prompt"
+                style="@style/Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="top|start"
+                android:hint="Pytanie do zdjęcia, np. Przetłumacz napis na polski"
+                android:importantForAutofill="no"
+                android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="6"
+                android:minLines="2"
+                android:scrollbars="vertical" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Puste pole: Gemini opisze, co widzi. Zdjęcie jest zmniejszane do 2048 px, bez lokalizacji i danych aparatu, nie trafia do galerii i znika z telefonu po wysłaniu. Do Google idzie tak samo jak tekst pytań." />
+
+            <Button
+                android:id="@+id/btn_photo"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Zrób zdjęcie i zapytaj Gemini" />
+
+            <TextView
+                android:id="@+id/photo_status"
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
         <!-- Telegram: odpowiadanie z zegarka -->
         <LinearLayout
             style="@style/Card"

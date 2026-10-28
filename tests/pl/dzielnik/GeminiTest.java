@@ -12,6 +12,7 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -244,6 +245,73 @@ public class GeminiTest {
         eq("Tak.", Gemini.compose("  ", "Tak."), "puste powiadomienie");
         contains(Gemini.compose("Ala ma kota.", "Dlaczego?"), "Ala ma kota.", "kontekst w treści");
         contains(Gemini.compose("Ala ma kota.", "Dlaczego?"), "Moja odpowiedź:\nDlaczego?", "odpowiedź w treści");
+
+        photoRequestTests(hist);
+    }
+
+    /** Wszystkie 256 wartości bajtu, żeby base64 sprawdzić na każdym. */
+    static byte[] sampleJpeg(int size, long seed) {
+        byte[] b = new byte[size];
+        new Random(seed).nextBytes(b);
+        for (int i = 0; i < Math.min(size, 256); i++) b[i] = (byte) i;
+        return b;
+    }
+
+    static List<Object> lastParts(String request) {
+        List<Object> contents = Json.asArray(Json.asObject(Json.parse(request)).get("contents"));
+        return Json.asArray(Json.asObject(contents.get(contents.size() - 1)).get("parts"));
+    }
+
+    static void photoRequestTests(List<Gemini.Turn> hist) {
+        byte[] jpeg = sampleJpeg(5000, 7);
+        String req = Gemini.buildRequest("System.", hist, "Co to jest?", jpeg);
+        Map<String, Object> root = Json.asObject(Json.parse(req));
+        List<Object> contents = Json.asArray(root.get("contents"));
+        eq(3, contents.size(), "zdjęcie: historia + pytanie");
+        eq("user", Json.asObject(contents.get(2)).get("role"), "zdjęcie: rola ostatniej wypowiedzi");
+
+        // zdjęcie tylko w ostatniej wypowiedzi, wcześniejsze zostają tekstowe
+        for (int i = 0; i < 2; i++) {
+            eq(1, Json.asArray(Json.asObject(contents.get(i)).get("parts")).size(), "zdjęcie: wypowiedź " + i + " bez obrazu");
+        }
+        List<Object> parts = lastParts(req);
+        eq(2, parts.size(), "zdjęcie: obraz i tekst");
+        Map<String, Object> image = Json.asObject(parts.get(0));
+        Map<String, Object> inline = Json.asObject(image.get("inline_data"));
+        ok(inline != null, "zdjęcie: obraz stoi PRZED tekstem");
+        eq("image/jpeg", Json.asString(inline.get("mime_type")), "zdjęcie: typ");
+        ok(Arrays.equals(jpeg, Base64.getDecoder().decode(Json.asString(inline.get("data")))), "zdjęcie: bajty po drodze");
+        eq(2, inline.size(), "zdjęcie: tylko typ i dane");
+        eq(1, image.size(), "zdjęcie: część ma tylko inline_data");
+        eq("Co to jest?", Json.asString(Json.asObject(parts.get(1)).get("text")), "zdjęcie: tekst po obrazie");
+        notContains(req, "\n", "zdjęcie: base64 bez łamania wierszy");
+        notContains(req, "data:image", "zdjęcie: czysty base64, nie adres data:");
+
+        // bez zdjęcia nic się nie zmienia
+        eq(Gemini.buildRequest("System.", hist, "Co to jest?"), Gemini.buildRequest("System.", hist, "Co to jest?", null),
+                "bez zdjęcia zapytanie jest takie jak dawniej");
+        eq(1, lastParts(Gemini.buildRequest("S", hist, "q", null)).size(), "bez zdjęcia jedna część");
+
+        // rozmiary: od 1 bajtu do kilkuset KB, w tym takie, które dają wszystkie końcówki base64 (=, ==)
+        for (int size : new int[]{1, 2, 3, 4, 5, 255, 256, 257, 100000, 700001}) {
+            byte[] b = sampleJpeg(size, size);
+            Map<String, Object> in = Json.asObject(Json.asObject(lastParts(Gemini.buildRequest(null, hist, "q", b)).get(0)).get("inline_data"));
+            ok(Arrays.equals(b, Base64.getDecoder().decode(Json.asString(in.get("data")))), "zdjęcie " + size + " B: bajty po drodze");
+        }
+
+        // pytanie do zdjęcia
+        eq(Gemini.DEFAULT_PHOTO_PROMPT, Gemini.photoPrompt(null, 100), "pytanie: null");
+        eq(Gemini.DEFAULT_PHOTO_PROMPT, Gemini.photoPrompt("  \n ", 100), "pytanie: same spacje");
+        eq("Co to?", Gemini.photoPrompt("  Co to?\n", 100), "pytanie: przycięte");
+        eq("Przetłumacz napis.", Gemini.photoPrompt("Przetłumacz napis.", 18), "pytanie: dokładnie do limitu");
+        eq("Przetłumacz napi", Gemini.photoPrompt("Przetłumacz napis.", 16), "pytanie: ucięte do limitu");
+        eq("ab", Gemini.photoPrompt("ab😀cd", 3), "pytanie: nie rozcina emoji");
+        eq("ab😀", Gemini.photoPrompt("ab😀cd", 4), "pytanie: emoji mieści się w całości");
+        eq("ab", Gemini.photoPrompt("ab  cd", 3), "pytanie: spacja po cięciu zniknęła");
+        eq(Gemini.DEFAULT_PHOTO_PROMPT, Gemini.photoPrompt("😀😀", 1), "pytanie: po cięciu pusto, więc domyślne");
+        eq("[Zdjęcie] Co to?", Gemini.composePhoto("Co to?"), "pamięć rozmowy: znacznik zdjęcia");
+        eq("[Zdjęcie] ", Gemini.composePhoto(null), "pamięć rozmowy: puste pytanie");
+        eq("[Zdjęcie] x", Gemini.composePhoto("  x "), "pamięć rozmowy: przycięte");
     }
 
     static void parseTests() {
@@ -441,6 +509,8 @@ public class GeminiTest {
             r = Gemini.ask(base, "   ", "ok", null, hist, "q", 2000, 2000, fast);
             contains(r.error, "Brak klucza", "pusty klucz");
             eq(0, seen.size(), "pusty klucz: nic nie wysłano");
+
+            photoServerTests(base, hist, fast);
         } finally {
             server.stop(0);
         }
@@ -454,6 +524,57 @@ public class GeminiTest {
         ok(!r.ok(), "zamknięty port");
         contains(r.error, "Nie udało się połączyć z Gemini", "zamknięty port: opis");
         eq(0, r.status, "zamknięty port: brak kodu HTTP");
+    }
+
+    static void photoServerTests(String base, List<Gemini.Turn> hist, int[] fast) {
+        // zdjęcie leci po HTTP w całości: ponad 300 KB, więc ciało zapytania nie mieści się w jednym kawałku
+        byte[] jpeg = sampleJpeg(300 * 1024, 99);
+        seen.clear();
+        Gemini.Result r = Gemini.ask(base, KEY, "ok", "System.", hist, "Co to jest?", jpeg, 2000, 2000, fast);
+        ok(r.ok(), "zdjęcie po HTTP: " + r.error);
+        eq("Dzień dobry! Zażółć gęślą jaźń 😀.", r.text, "zdjęcie po HTTP: odpowiedź");
+        eq(1, seen.size(), "zdjęcie po HTTP: jedno zapytanie");
+        Seen s = seen.get(0);
+        eq(KEY, s.key, "zdjęcie po HTTP: klucz w nagłówku");
+        notContains(s.path, KEY, "zdjęcie po HTTP: klucza nie ma w adresie");
+        List<Object> parts = lastParts(s.body);
+        Map<String, Object> inline = Json.asObject(Json.asObject(parts.get(0)).get("inline_data"));
+        ok(Arrays.equals(jpeg, Base64.getDecoder().decode(Json.asString(inline.get("data")))), "zdjęcie po HTTP: bajty doszły");
+        eq("image/jpeg", Json.asString(inline.get("mime_type")), "zdjęcie po HTTP: typ");
+        eq("Co to jest?", Json.asString(Json.asObject(parts.get(1)).get("text")), "zdjęcie po HTTP: pytanie");
+        ok(s.body.length() > 400 * 1024, "zdjęcie po HTTP: ciało ma rozmiar zdjęcia w base64");
+
+        // chwilowy błąd: ponowienie niesie to samo zdjęcie
+        seen.clear();
+        counts.remove("retry503");
+        r = Gemini.ask(base, KEY, "retry503", null, hist, "q", jpeg, 2000, 2000, fast);
+        ok(r.ok(), "zdjęcie + 503: " + r.error);
+        eq(2, seen.size(), "zdjęcie + 503: dwa zapytania");
+        eq(seen.get(0).body, seen.get(1).body, "zdjęcie + 503: ponowienie jest takie samo jak pierwsze zapytanie");
+        contains(seen.get(1).body, "inline_data", "zdjęcie + 503: ponowienie ma zdjęcie");
+
+        // klucz zakryty także przy zapytaniu ze zdjęciem
+        r = Gemini.ask(base, KEY, "echo", null, hist, "q", jpeg, 2000, 2000, fast);
+        notContains(r.error, KEY, "zdjęcie + echo: klucz zakryty");
+
+        // za duże zdjęcie nie idzie w sieć
+        seen.clear();
+        r = Gemini.ask(base, KEY, "ok", null, hist, "q", new byte[Gemini.MAX_IMAGE_BYTES + 1], 2000, 2000, fast);
+        ok(!r.ok(), "za duże zdjęcie");
+        contains(r.error, "za duże", "za duże zdjęcie: opis");
+        eq(0, seen.size(), "za duże zdjęcie: nic nie wysłano");
+        eq(0, r.status, "za duże zdjęcie: brak kodu HTTP");
+
+        // pusty klucz ze zdjęciem
+        seen.clear();
+        r = Gemini.ask(base, " ", "ok", null, hist, "q", jpeg, 2000, 2000, fast);
+        contains(r.error, "Brak klucza", "zdjęcie bez klucza");
+        eq(0, seen.size(), "zdjęcie bez klucza: nic nie wysłano");
+
+        // najmniejsze możliwe zdjęcie (1 bajt) przechodzi przez tę samą drogę
+        seen.clear();
+        r = Gemini.ask(base, KEY, "ok", null, hist, "q", new byte[]{1}, 2000, 2000, fast);
+        ok(r.ok(), "zdjęcie 1 B");
     }
 
     // ------------------------------------------------------- pamięć rozmowy
@@ -528,5 +649,6 @@ public class GeminiTest {
         serverTests();
         historyTests();
         System.out.println("OK: " + checks + " sprawdzeń");
+        System.exit(0); // wątki sztucznego serwera czekałyby jeszcze minutę
     }
 }

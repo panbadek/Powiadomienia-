@@ -31,9 +31,10 @@ import java.util.List;
 public class MainActivity extends Activity {
 
     private static final int DEFAULT_TEST = 400;
+    private static final int REQUEST_PHOTO = 41;
 
-    private EditText text, limit, delay, testLen, seen, gemKey, gemModel, gemQuestion, tgToken;
-    private TextView preview, result, status, measureToggle, gemStatus, tgStatus;
+    private EditText text, limit, delay, testLen, seen, gemKey, gemModel, gemQuestion, photoPrompt, tgToken;
+    private TextView preview, result, status, measureToggle, gemStatus, photoStatus, tgStatus;
     private Button send, use;
     private Switch reverse, replySwitch, tgListen;
     private RadioGroup destGroup;
@@ -45,6 +46,9 @@ public class MainActivity extends Activity {
     private long tgNoteAt;
     private boolean tgBusy;
     private boolean updatingSwitch;
+
+    // Aparat jest otwarty i czekam na zdjęcie (drugie dotknięcie przycisku w tym czasie nic nie robi).
+    private boolean cameraOpen;
 
     private int measured = -1;
     private boolean wasRunning;
@@ -84,6 +88,8 @@ public class MainActivity extends Activity {
         gemModel = findViewById(R.id.gem_model);
         gemQuestion = findViewById(R.id.gem_question);
         gemStatus = findViewById(R.id.gem_status);
+        photoPrompt = findViewById(R.id.photo_prompt);
+        photoStatus = findViewById(R.id.photo_status);
         replySwitch = findViewById(R.id.sw_reply);
         tgToken = findViewById(R.id.tg_token);
         tgStatus = findViewById(R.id.tg_status);
@@ -97,6 +103,7 @@ public class MainActivity extends Activity {
         reverse.setChecked(sp.getBoolean(Prefs.REVERSE, false));
         gemKey.setText(sp.getString(Prefs.GEMINI_KEY, ""));
         gemModel.setText(sp.getString(Prefs.GEMINI_MODEL, Gemini.DEFAULT_MODEL));
+        photoPrompt.setText(Prefs.photoPrompt(this));
         replySwitch.setChecked(sp.getBoolean(Prefs.GEMINI_REPLY, true));
         tgToken.setText(sp.getString(Prefs.TG_TOKEN, ""));
         destGroup.check(destRadioId(Prefs.dest(this)));
@@ -104,6 +111,7 @@ public class MainActivity extends Activity {
 
         letScrollInside(text);
         letScrollInside(gemQuestion);
+        letScrollInside(photoPrompt);
 
         Watcher watcher = new Watcher(this::updatePreview);
         text.addTextChangedListener(watcher);
@@ -116,6 +124,7 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_decode).setOnClickListener(v -> onDecode());
         findViewById(R.id.btn_ask).setOnClickListener(v -> onAsk());
         findViewById(R.id.btn_ask_notif).setOnClickListener(v -> onAskNotification());
+        findViewById(R.id.btn_photo).setOnClickListener(v -> onPhoto());
         findViewById(R.id.btn_new_chat).setOnClickListener(v -> onNewChat());
         findViewById(R.id.btn_tg_connect).setOnClickListener(v -> onTgConnect());
         findViewById(R.id.btn_tg_test).setOnClickListener(v -> onTgTest());
@@ -280,11 +289,71 @@ public class MainActivity extends Activity {
         toast("Zaczynam nową rozmowę. Gemini nie pamięta poprzednich pytań.");
     }
 
-    /** Pokazuje, co dzieje się z ostatnim pytaniem do Gemini. */
+    /** Pokazuje, co dzieje się z ostatnim pytaniem do Gemini: pod polem pytania albo pod przyciskiem zdjęcia. */
     private void updateGeminiState() {
         String st = GeminiService.status;
-        if (!st.contentEquals(gemStatus.getText())) gemStatus.setText(st);
-        gemStatus.setVisibility(st.isEmpty() ? View.GONE : View.VISIBLE);
+        boolean photo = GeminiService.statusIsPhoto;
+        showStatus(gemStatus, photo ? "" : st);
+        showStatus(photoStatus, photo ? st : "");
+    }
+
+    private static void showStatus(TextView view, String text) {
+        if (!text.contentEquals(view.getText())) view.setText(text);
+        view.setVisibility(text.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    // ---------- Zdjęcie ----------
+
+    /**
+     * Otwiera aparat telefonu. Zdjęcie ląduje w pamięci podręcznej aplikacji (przez PhotoProvider), więc nie trzeba
+     * pozwolenia na aparat ani na pliki, i nie trafia do galerii. Dalej zajmuje się nim PhotoFlow.
+     */
+    private void onPhoto() {
+        if (cameraOpen) return;
+        if (gemKey.getText().toString().trim().isEmpty()) {
+            toast("Najpierw wklej klucz API Gemini.");
+            return;
+        }
+        if (!notificationsAllowed()) return;
+        saveSettings();
+        Intent camera = PhotoFlow.beginCapture(this, photoPrompt.getText().toString());
+        try {
+            startActivityForResult(camera, REQUEST_PHOTO);
+            cameraOpen = true;
+        } catch (RuntimeException e) {
+            PhotoFlow.abortCapture(this);
+            toast("Nie udało się otworzyć aparatu. Sprawdź, czy w telefonie jest aplikacja aparatu.");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_PHOTO) return;
+        cameraOpen = false;
+        switch (PhotoFlow.finishCapture(this, resultCode == RESULT_OK)) {
+            case PhotoFlow.MISSING:
+                toast("Aparat nie zapisał zdjęcia. Spróbuj jeszcze raz.");
+                break;
+            case PhotoFlow.SENT:
+                toast("Wysyłam zdjęcie do Gemini. Odpowiedź przyjdzie " + answerWhere() + ".");
+                break;
+            case PhotoFlow.NOT_STARTED:
+                toast("Nie udało się wysłać zdjęcia. Spróbuj jeszcze raz przy otwartej aplikacji.");
+                break;
+            default:
+                // nic nie czekało albo zrezygnowano w aparacie
+                break;
+        }
+    }
+
+    /** Dokąd trafi odpowiedź, zgodnie z ustawieniem „Gdzie wysyłać”. */
+    private String answerWhere() {
+        int flags = Dest.flags(Prefs.dest(this), Prefs.telegramReady(this), false);
+        boolean tg = (flags & Dest.F_TELEGRAM) != 0;
+        boolean notif = (flags & Dest.F_NOTIFICATIONS) != 0;
+        if (tg && notif) return "jako powiadomienia i w Telegramie";
+        return tg ? "do Telegrama" : "jako powiadomienia";
     }
 
     // ---------- Telegram ----------
@@ -557,6 +626,7 @@ public class MainActivity extends Activity {
         ed.putString(Prefs.GEMINI_MODEL, model);
         if (!model.equals(typedModel)) gemModel.setText(model);
         ed.putBoolean(Prefs.GEMINI_REPLY, replySwitch.isChecked());
+        ed.putString(Prefs.PHOTO_PROMPT, photoPrompt.getText().toString());
 
         // Nowy token to nowy bot: zapisany czat i numer wiadomości do niego nie pasują, nasłuch trzeba połączyć od nowa.
         String token = Telegram.cleanToken(tgToken.getText().toString());

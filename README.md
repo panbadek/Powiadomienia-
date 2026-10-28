@@ -1,12 +1,12 @@
 # Powiadomienia
 
-Wklejasz tekst, aplikacja tnie go na części o zadanej długości (w znakach) i wysyła każdą część jako osobne powiadomienie. Części i odpowiedzi Gemini mogą też iść jako wiadomości od Twojego bota w Telegramie, dzięki czemu da się na nie odpowiadać z zegarka.
+Wklejasz tekst, aplikacja tnie go na części o zadanej długości (w znakach) i wysyła każdą część jako osobne powiadomienie. Części i odpowiedzi Gemini mogą też iść jako wiadomości od Twojego bota w Telegramie, dzięki czemu da się na nie odpowiadać z zegarka. Możesz też zrobić zdjęcie i zapytać o nie Gemini: odpowiedź jest cięta i wysyłana tak samo jak wklejony tekst.
 
 ## Jak działa podział
 
 - Cięcie następuje tylko między zdaniami. Zdanie kończy się kropką (też `!` i `?`), a następne zaczyna się od wielkiej litery. Dlatego „np. jabłko” nie kończy zdania, ale „np. Kowalski” już tak.
 - Zdanie, które nie mieści się w bieżącej części, przechodzi w całości do następnej. Tak aż do końca tekstu.
-- Lista, nagłówki i wiersze wierszy zwykle nie mają kropek, więc cały taki tekst jest jednym „zdaniem”. Gdy jest dłuższy niż limit, dzielę go po wierszach: każdy wiersz trafia w całości do jednej części, a kolejne wiersze są upychane, dopóki się mieszczą. Lista „Maroko – Rabat / Algieria – Algier / …” nie zostanie więc przecięta w środku wpisu.
+- Listy, nagłówki i wersy wierszy zwykle nie mają kropek, więc cały taki tekst jest jednym „zdaniem”. Gdy jest dłuższy niż limit, dzielę go po wierszach tekstu: każdy wiersz trafia w całości do jednej części, a kolejne wiersze są upychane, dopóki się mieszczą. Lista „Maroko – Rabat / Algieria – Algier / …” nie zostanie więc przecięta w środku wpisu.
 - Wiersz (albo zdanie bez końców wierszy) dłuższy niż cały limit dzielę po słowach, żeby cały tekst został wysłany.
 - Spacja albo koniec wiersza na granicy cięcia nie jest wysyłany, więc suma długości części jest o kilka znaków mniejsza niż długość całego tekstu.
 - Między powiadomieniami jest przerwa (domyślnie 2 s). Android pozwala aplikacji mieć naraz 50 powiadomień, więc przy tym limicie wysyłanie czeka, aż usuniesz część.
@@ -27,6 +27,29 @@ Szczegóły:
 - Błędy (zły klucz, limit zapytań, brak internetu) przychodzą jako powiadomienie „Gemini: coś poszło nie tak”.
 - Pytania i odpowiedzi idą przez internet do Google, więc nie wysyłaj tak niczego, czego nie chcesz tam wysyłać.
 - Czy przycisk „Odpowiedz” pokaże się też na zegarku, zależy od aplikacji zegarka. Zegarki Huawei pozwalają odpowiadać tylko na powiadomienia z wybranych komunikatorów (m.in. Telegrama), więc na nich powiadomienia tej aplikacji najpewniej przycisku nie dostaną. Do odpowiadania z zegarka służy następna sekcja.
+
+## Zdjęcie do Gemini
+
+Robisz zdjęcie (napisu, menu, ekranu, tablicy), dopisujesz, o co chcesz zapytać, a odpowiedź Gemini wraca tak samo jak każdy inny tekst: pocięta na części i wysłana według bieżących ustawień (dokąd: powiadomienia, Telegram albo oba; długość części; przerwa; kolejność, także „od ostatniej części”).
+
+1. Wpisz klucz Gemini (karta „Gemini w powiadomieniach”).
+2. W karcie „Zdjęcie do Gemini” wpisz pytanie do zdjęcia, np. „Przetłumacz napis na polski”. Puste pole oznacza „Opisz, co jest na tym zdjęciu.”
+3. Naciśnij „Zrób zdjęcie i zapytaj Gemini”. Otworzy się aparat telefonu. Zrób zdjęcie i zatwierdź je w aparacie.
+4. Po powrocie aplikacja zmniejsza zdjęcie i wysyła je razem z pytaniem do Gemini. W karcie widać stan („Przygotowuję zdjęcie…”, „Wysyłam zdjęcie do Gemini…”), a odpowiedź przychodzi tam, gdzie wskazuje „Gdzie wysyłać”.
+
+Szczegóły:
+- Aplikacja nie prosi o pozwolenie na aparat ani na zdjęcia. Zdjęcie robi aparat systemowy (ten, który masz w telefonie jako domyślny) i zapisuje je w pamięci podręcznej aplikacji, w jednym pliku, do którego dostaje dostęp tylko na czas robienia tego zdjęcia. Zdjęcie nie trafia do galerii, a po wysłaniu albo po zrezygnowaniu w aparacie plik jest kasowany. Porzucone pliki starsze niż doba aplikacja sprząta sama.
+- Przed wysłaniem zdjęcie jest zmniejszane tak, by dłuższy bok miał najwyżej 2048 pikseli, obracane do pionu według znacznika orientacji i zapisywane od nowa jako JPEG. Nowy plik nie ma danych EXIF, więc do Google nie idzie lokalizacja GPS ani model telefonu.
+- Zdjęcie idzie przez internet do Google, tak jak pytania tekstowe. Nie fotografuj tego, czego nie chcesz tam wysyłać.
+- Pamięć rozmowy zapisuje Twoje pytanie ze znacznikiem „[Zdjęcie]” i odpowiedź Gemini, ale nie samo zdjęcie. Pytanie uzupełniające („A co jest po lewej?”) odwoła się więc do odpowiedzi, lecz Gemini nie zobaczy już obrazu. Gdy potrzebujesz go drugi raz, zrób zdjęcie jeszcze raz.
+- Model z pola „Model” musi przyjmować obrazy. Domyślny `gemini-3.5-flash-lite` je przyjmuje. Gdy wpiszesz model bez obsługi obrazów, Gemini zwróci błąd i aplikacja pokaże go jak każdy inny.
+- Aparat potrafi zająć tyle pamięci, że system na chwilę wyłącza aplikację w tle. Nic nie przepada: pytanie i nazwa pliku są zapamiętane w ustawieniach, więc po powrocie z aparatu zdjęcie i tak pójdzie do Gemini.
+- Błędy (aparat nie zapisał zdjęcia, zdjęcie za duże, zły klucz, limit zapytań, brak internetu) przychodzą jako powiadomienie „Gemini: coś poszło nie tak”.
+
+**Czego nie sprawdziłem**
+- Nie miałem tu prawdziwego telefonu. Cały obieg (aparat, plik, zmniejszenie i obrót, Gemini, cięcie, powiadomienia i Telegram) sprawdziłem na zwykłej Javie z atrapami Androida i sztucznymi serwerami Gemini i Telegrama, a rachunki na zdjęciu (rozmiar, obrót według wszystkich ośmiu kodów EXIF) osobnymi testami.
+- Nie wiem, jak zachowa się aparat w Twoim telefonie. Aplikacje aparatu bywają różne i zdarza się, że któraś nie zapisuje zdjęcia pod podanym adresem. Wtedy aplikacja powie „Aparat nie zapisał zdjęcia” i nic nie wyśle. Gdyby tak było, napisz, jaki to telefon i aparat.
+- Odczyt i zapis JPEG robi w telefonie Android, a w moich testach robiła to zwykła Java. Nie sprawdziłem, czy Android odczyta zdjęcia z Twojego aparatu dokładnie tak samo (zwłaszcza bardzo duże).
 
 ## Odpowiadanie z zegarka (przez Telegram)
 
@@ -85,14 +108,14 @@ Rozwiń powiadomienie, przepisz końcówkę razem ze średnikiem przed ostatnią
 2. Wejdź w zakładkę Actions i poczekaj, aż „Zbuduj APK” zrobi się zielone (kilka minut).
 3. Na stronie repozytorium otwórz Releases → „Powiadomienia (najnowsza wersja)” i pobierz **jeden plik: `Powiadomienia.apk`**. Zainstaluj go na telefonie (Android poprosi o zgodę na instalację z nieznanych źródeł).
 
-Wersje do 1.0 były podpisane innym kluczem w każdej budowie, więc przy przejściu na 1.1 odinstaluj starą wersję. Od 1.1 (czyli także 1.2 z Telegramem i 1.3) aplikacja jest podpisana stałym, publicznym kluczem testowym z pliku `app/debug.keystore` (tylko do użytku osobistego), więc kolejne wersje instalują się na wierzchu, a ustawienia, w tym klucz Gemini i token bota, zostają.
+Wersje do 1.0 były podpisane innym kluczem w każdej budowie, więc przy przejściu na 1.1 odinstaluj starą wersję. Od 1.1 (czyli także 1.2 z Telegramem, 1.3 i 1.4 ze zdjęciem) aplikacja jest podpisana stałym, publicznym kluczem testowym z pliku `app/debug.keystore` (tylko do użytku osobistego), więc kolejne wersje instalują się na wierzchu, a ustawienia, w tym klucz Gemini i token bota, zostają.
 
 **Przez Android Studio**
 File → Open → folder projektu, poczekaj na synchronizację, potem Build → Build APK(s) albo Run z podłączonym telefonem.
 
 ## Testy logiki
 
-Podział, pomiar, rozmowa z Gemini (JSON, zapytanie, odczyt odpowiedzi i błędów, ponawianie, pamięć rozmowy) oraz klient Telegrama i pętla nasłuchu nie zależą od Androida i mają testy (zwykła Java 17+). Testy Gemini i Telegrama same uruchamiają sztuczny serwer HTTP:
+Podział, pomiar, rozmowa z Gemini (JSON, zapytanie ze zdjęciem lub bez, odczyt odpowiedzi i błędów, ponawianie, pamięć rozmowy), klient Telegrama i pętla nasłuchu oraz rachunki na zdjęciu (zmniejszanie, obrót według EXIF, nazwy plików) nie zależą od Androida i mają testy (zwykła Java 17+). Testy Gemini i Telegrama same uruchamiają sztuczny serwer HTTP:
 
 ```
 javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Splitter.java app/src/main/java/pl/dzielnik/Measure.java tests/SplitterTest.java
@@ -103,6 +126,9 @@ java -cp out pl.dzielnik.GeminiTest
 
 javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Json.java app/src/main/java/pl/dzielnik/Splitter.java app/src/main/java/pl/dzielnik/Measure.java app/src/main/java/pl/dzielnik/Telegram.java app/src/main/java/pl/dzielnik/TelegramBridge.java app/src/main/java/pl/dzielnik/Dest.java tests/pl/dzielnik/TelegramTest.java
 java -cp out pl.dzielnik.TelegramTest
+
+javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/PhotoMath.java tests/pl/dzielnik/PhotoMathTest.java
+java -cp out pl.dzielnik.PhotoMathTest
 ```
 
 ## Wskazówka
