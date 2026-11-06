@@ -9,15 +9,16 @@ import java.util.List;
  *
  * Każde miejsce, w którym mogłaby zacząć się nowa część, ma koszt cięcia, a każda część kosztuje {@link #CHUNK}.
  * Wybieram podział o najmniejszej sumie kosztów, więc:
- * - sekcja (kawałek tekstu między pustymi wierszami), która mieści się w limicie, zostaje w całości,
- *   a kilka krótkich sekcji dzieli jedną część, jeśli się mieszczą,
+ * - sekcja (kawałek tekstu między pustymi wierszami), która mieści się w limicie, nie jest przecinana między
+ *   pozycjami ani zdaniami (wyjątek: tanie cięcie przed podnagłówkiem w jej środku), a kilka krótkich sekcji
+ *   dzieli jedną część, jeśli się mieszczą,
  * - sekcja dłuższa niż limit jest cięta między pozycjami listy, potem między zdaniami, potem między słowami,
  *   a znak po znaku dopiero wtedy, gdy samo jedno słowo nie mieści się w limicie,
- * - nagłówek (# Tytuł, **Tytuł**, wiersz kończący się dwukropkiem) nie zostaje sam na końcu części,
- * - punktor ani numer („-”, „•”, „1.”, „a)”) nie zostaje sam na końcu części.
+ * - nagłówek (# Tytuł, **Tytuł**, wiersz kończący się dwukropkiem) zostaje sam na końcu części tylko w ostateczności,
+ * - punktor ani numer („-”, „•”, „1.”, „a)”) nie jest odrywany od tekstu pozycji.
  *
- * Koszt cięcia (im niżej, tym lepsze miejsce); część dodatkowa kosztuje {@link #CHUNK}, więc jedna część więcej
- * jest tańsza niż przecięcie sekcji w środku, ale nie tańsza niż dwa takie przecięcia:
+ * Koszt cięcia (im niżej, tym lepsze miejsce). Część dodatkowa kosztuje {@link #CHUNK}, czyli mniej niż każde cięcie
+ * między pozycjami i zdaniami (co najmniej 4), więc lepsza jest jedna część więcej niż przecięcie sekcji, która się mieści:
  * <pre>
  *   0  BLANK   przed wierszem poprzedzonym pustym wierszem (granica sekcji)
  *   1  GROUP   przed nagłówkiem w tej samej sekcji

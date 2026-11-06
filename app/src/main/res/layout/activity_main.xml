@@ -197,7 +197,7 @@
                 style="@style/Hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Tnie najpierw między sekcjami (po pustym wierszu), potem między punktami listy i zdaniami. Nagłówek zostaje razem z treścią, a sekcja, która się mieści w limicie, nie jest przecinana. Może dać więcej części niż zwykłe dzielenie." />
+                android:text="Tnie najpierw między sekcjami (po pustym wierszu), potem między punktami listy i zdaniami. Nagłówek idzie dalej razem z treścią, a sekcja, która się mieści w limicie, nie jest przecinana między punktami ani zdaniami. Może dać więcej części niż zwykłe dzielenie." />
 
             <TextView
                 android:id="@+id/preview"
