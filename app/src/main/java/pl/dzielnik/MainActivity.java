@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
     private EditText text, limit, delay, testLen, seen, gemKey, gemModel, gemQuestion, photoPrompt, tgToken;
     private TextView preview, result, status, measureToggle, gemStatus, photoStatus, tgStatus;
     private Button send, use;
-    private Switch reverse, replySwitch, tgListen;
+    private Switch reverse, smart, replySwitch, tgListen;
     private RadioGroup destGroup;
     private ProgressBar progress;
     private View measureBody;
@@ -83,6 +83,7 @@ public class MainActivity extends Activity {
         send = findViewById(R.id.btn_send);
         use = findViewById(R.id.btn_use);
         reverse = findViewById(R.id.sw_reverse);
+        smart = findViewById(R.id.sw_smart);
         progress = findViewById(R.id.progress);
         gemKey = findViewById(R.id.gem_key);
         gemModel = findViewById(R.id.gem_model);
@@ -101,6 +102,7 @@ public class MainActivity extends Activity {
         delay.setText(sp.getString(Prefs.DELAY, "2"));
         testLen.setText(String.valueOf(sp.getInt(Prefs.TEST_LEN, DEFAULT_TEST)));
         reverse.setChecked(sp.getBoolean(Prefs.REVERSE, false));
+        smart.setChecked(sp.getBoolean(Prefs.SMART, false));
         gemKey.setText(sp.getString(Prefs.GEMINI_KEY, ""));
         gemModel.setText(sp.getString(Prefs.GEMINI_MODEL, Gemini.DEFAULT_MODEL));
         photoPrompt.setText(Prefs.photoPrompt(this));
@@ -130,6 +132,7 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_tg_test).setOnClickListener(v -> onTgTest());
         findViewById(R.id.btn_battery).setOnClickListener(v -> onBatterySettings());
         tgListen.setOnCheckedChangeListener((button, on) -> onTgListenChanged(on));
+        smart.setOnCheckedChangeListener((button, on) -> updatePreview());
         send.setOnClickListener(v -> onSend());
         use.setOnClickListener(v -> {
             if (measured >= Splitter.MIN_LIMIT) {
@@ -200,7 +203,7 @@ public class MainActivity extends Activity {
             toast("Długość części musi mieścić się między " + Splitter.MIN_LIMIT + " a " + Measure.MAX + " znaków.");
             return;
         }
-        List<String> parts = Splitter.split(text.getText().toString(), lim);
+        List<String> parts = Splitter.split(text.getText().toString(), lim, smart.isChecked());
         if (parts.isEmpty()) {
             toast("Najpierw wklej tekst.");
             return;
@@ -589,7 +592,7 @@ public class MainActivity extends Activity {
         } else if (t.trim().isEmpty()) {
             preview.setText("Wklej tekst, a tu zobaczysz, na ile części zostanie podzielony.");
         } else {
-            List<String> parts = Splitter.split(t, lim);
+            List<String> parts = Splitter.split(t, lim, smart.isChecked());
             int longest = 0;
             for (String p : parts) longest = Math.max(longest, p.length());
             preview.setText("Tekst (" + t.length() + " zn.) zostanie podzielony na " + parts.size() + " "
@@ -619,6 +622,7 @@ public class MainActivity extends Activity {
         if (test >= 9 && test <= Measure.MAX) ed.putInt(Prefs.TEST_LEN, test);
         ed.putString(Prefs.DELAY, String.valueOf(readDelayMs() / 1000.0).replaceAll("\\.0$", ""));
         ed.putBoolean(Prefs.REVERSE, reverse.isChecked());
+        ed.putBoolean(Prefs.SMART, smart.isChecked());
 
         ed.putString(Prefs.GEMINI_KEY, gemKey.getText().toString().trim());
         String typedModel = gemModel.getText().toString().trim();

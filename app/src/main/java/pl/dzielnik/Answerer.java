@@ -88,7 +88,7 @@ final class Answerer {
             }
         }
 
-        List<String> parts = Splitter.split(result.text, Prefs.limit(c));
+        List<String> parts = Splitter.split(result.text, Prefs.limit(c), Prefs.smart(c));
         if (parts.isEmpty()) {
             fail(c, "Gemini zwróciło pustą odpowiedź.", fromTelegram);
             return;

@@ -15,6 +15,9 @@ import java.util.List;
  * - wiersz (albo zdanie bez końców wierszy) dłuższy niż limit dzielę po słowach (gdy brak spacji,
  *   w dowolnym miejscu), żeby cały tekst został wysłany.
  *
+ * Drugi sposób, {@link #split(String, int, boolean)} z {@code smart = true}, to dzielenie inteligentne
+ * ({@link SmartSplitter}): tnie najpierw między sekcjami, a wewnątrz sekcji dopiero wtedy, gdy się nie mieści.
+ *
  * Klasa nie korzysta z niczego z Androida, więc da się ją testować zwykłą Javą.
  */
 public final class Splitter {
@@ -22,6 +25,19 @@ public final class Splitter {
     public static final int MIN_LIMIT = 10;
 
     private Splitter() {}
+
+    /** Dzieli zwykłym algorytmem ({@code smart = false}) albo inteligentnie ({@code smart = true}). */
+    public static List<String> split(String text, int limit, boolean smart) {
+        if (!smart) return split(text, limit);
+        if (limit < MIN_LIMIT) {
+            throw new IllegalArgumentException("limit musi wynosić co najmniej " + MIN_LIMIT);
+        }
+        if (text == null) return new ArrayList<>();
+        String t = text.replace("\r\n", "\n").replace('\r', '\n');
+        // przy tak długim tekście dzielenie inteligentne zjadłoby za dużo pamięci, a nikt tyle nie wyśle w powiadomieniach
+        if (t.length() > SmartSplitter.MAX_CHARS) return split(text, limit);
+        return SmartSplitter.split(t, limit);
+    }
 
     public static List<String> split(String text, int limit) {
         if (limit < MIN_LIMIT) {
@@ -143,17 +159,17 @@ public final class Splitter {
         }
     }
 
-    private static boolean ws(char c) {
+    static boolean ws(char c) {
         return Character.isWhitespace(c) || Character.isSpaceChar(c);
     }
 
     /** Znaki, które mogą stać tuż za kropką i nadal należą do tego zdania: "...", "?!", ”, ), * itp. */
-    private static boolean isEndMark(char c) {
+    static boolean isEndMark(char c) {
         return ".!?…”\"’'»)]*_".indexOf(c) >= 0;
     }
 
     /** Znaki, które mogą stać przed wielką literą na początku zdania: „, (, myślnik, punktor listy. */
-    private static boolean isOpener(char c) {
+    static boolean isOpener(char c) {
         return "„“\"«‘'([*_—–- \t".indexOf(c) >= 0;
     }
 }

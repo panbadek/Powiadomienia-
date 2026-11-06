@@ -1,6 +1,6 @@
 # Powiadomienia
 
-Wklejasz tekst, aplikacja tnie go na części o zadanej długości (w znakach) i wysyła każdą część jako osobne powiadomienie. Części i odpowiedzi Gemini mogą też iść jako wiadomości od Twojego bota w Telegramie, dzięki czemu da się na nie odpowiadać z zegarka. Możesz też zrobić zdjęcie i zapytać o nie Gemini: odpowiedź jest cięta i wysyłana tak samo jak wklejony tekst.
+Wklejasz tekst, aplikacja tnie go na części o zadanej długości (w znakach) i wysyła każdą część jako osobne powiadomienie. Części i odpowiedzi Gemini mogą też iść jako wiadomości od Twojego bota w Telegramie, dzięki czemu da się na nie odpowiadać z zegarka. Możesz też zrobić zdjęcie i zapytać o nie Gemini: odpowiedź jest cięta i wysyłana tak samo jak wklejony tekst. Opcja „Dzielenie inteligentne” pilnuje, żeby przy tekstach z nagłówkami i listami nie rozrywać sekcji (sekcja „Dzielenie inteligentne” niżej).
 
 ## Jak działa podział
 
@@ -12,6 +12,33 @@ Wklejasz tekst, aplikacja tnie go na części o zadanej długości (w znakach) i
 - Między powiadomieniami jest przerwa (domyślnie 2 s). Android pozwala aplikacji mieć naraz 50 powiadomień, więc przy tym limicie wysyłanie czeka, aż usuniesz część.
 - Tekst możesz też wysłać do aplikacji z innej aplikacji: Udostępnij → Powiadomienia.
 - Opcja „Wysyłaj od ostatniej części do pierwszej”: najnowsze powiadomienie jest w panelu na samej górze, więc przy tej opcji część 1 przychodzi ostatnia i jest pierwsza od góry. Numery w tytułach („Część 3/12”) się nie zmieniają.
+- Opisany wyżej podział jest zwykły. Przy tekstach z nagłówkami, listami i sekcjami lepiej sprawdza się „Dzielenie inteligentne” (następna sekcja).
+
+## Dzielenie inteligentne (opcja)
+
+Przełącznik „Dzielenie inteligentne” (karta „2. Ustaw części”) jest domyślnie wyłączony. Zwykłe dzielenie upycha w części tyle, ile się zmieści, więc w tekście z nagłówkami i listami potrafi zostawić nagłówek na końcu jednej części, a jego listę dać w następnej, albo przeciąć sekcję w połowie, choć cała zmieściłaby się w następnej. Dzielenie inteligentne unika takich cięć: woli mieć trochę więcej krótszych części niż rozerwany fragment.
+
+Miejsca cięcia, od najlepszego:
+1. pusty wiersz między sekcjami,
+2. początek nagłówka (wiersz zaczynający się od `#`, wiersz w całości pogrubiony `**tak**` albo kończący się dwukropkiem),
+3. nowy wiersz po wierszu zakończonym kropką, `!`, `?`, dwukropkiem lub średnikiem oraz nowy punkt listy (`-`, `•`, `1.`, `a)`),
+4. koniec zdania w środku wiersza (kropka, `!` albo `?`, a dalej wielka litera),
+5. koniec wiersza bez kropki, np. między wersami wiersza,
+6. między słowami,
+7. w środku słowa dłuższego niż cały limit, tylko gdy inaczej się nie da.
+
+Aplikacja wybiera taki podział, który mieści się w limicie i ma najmniejszy łączny koszt: każde cięcie kosztuje tym więcej, im gorsze jest miejsce, a każda część ma stałą cenę, więc części nie mnożą się bez potrzeby. Dokładne koszty są opisane na początku pliku `SmartSplitter.java`. Z tego wynika:
+- Sekcja (fragment między pustymi wierszami), która mieści się w limicie, nie jest przecinana między punktami ani zdaniami. Wyjątkiem są podnagłówki w jej środku: przed nimi cięcie jest tanie, więc sekcja z podsekcjami może zostać rozdzielona na podsekcje.
+- Nagłówek idzie dalej razem z początkiem swojej treści. Sam na końcu części zostaje tylko w ostateczności.
+- Punktor albo numer pozycji (`-`, `12.`, `(a)`) nie jest odrywany od tekstu pozycji.
+- Części może być więcej niż przy zwykłym dzieleniu. Dla zwykłego tekstu ciągłego (zdania jedno za drugim, bez nowych wierszy), w którym każde zdanie mieści się w limicie, oba sposoby tną tak samo.
+- Wewnątrz części tekst zostaje bez zmian, razem z pustymi wierszami. Znikają tylko spacje i puste wiersze na brzegach części.
+
+Opcja działa przy wszystkim, co jest cięte według „Długość części”: wklejony lub udostępniony tekst oraz odpowiedzi Gemini (także na zdjęcie), niezależnie od tego, czy idą do powiadomień, czy do Telegrama. Podgląd liczby części w aplikacji od razu uwzględnia przełącznik. Nie zmienia dalszego dzielenia części dłuższych niż 3900 znaków na wiadomości w Telegramie. Dla tekstu dłuższego niż milion znaków aplikacja zawsze dzieli zwykłym sposobem.
+
+**Czego nie sprawdziłem**
+- Nie miałem tu prawdziwego telefonu. Sam podział sprawdziłem testami na zwykłej Javie (m.in. porównaniem z osobno napisanym wzorcem i z wyszukiwaniem wyczerpującym), a podłączenie przełącznika (wklejony tekst, odpowiedzi Gemini w powiadomieniach i w Telegramie) na atrapach Androida. Wyglądu przełącznika na prawdziwym ekranie nie oglądałem.
+- Reguły (co jest nagłówkiem, ile który rodzaj cięcia „kosztuje”) to moje założenia, dobrane na przykładach, w tym na liście słownictwa sportowego. Dla innych tekstów mogą dać podział, który Ci się nie spodoba. Wtedy wyłącz opcję albo napisz, co poprawić.
 
 ## Gemini: odpowiadanie z powiadomień
 
@@ -108,23 +135,26 @@ Rozwiń powiadomienie, przepisz końcówkę razem ze średnikiem przed ostatnią
 2. Wejdź w zakładkę Actions i poczekaj, aż „Zbuduj APK” zrobi się zielone (kilka minut).
 3. Na stronie repozytorium otwórz Releases → „Powiadomienia (najnowsza wersja)” i pobierz **jeden plik: `Powiadomienia.apk`**. Zainstaluj go na telefonie (Android poprosi o zgodę na instalację z nieznanych źródeł).
 
-Wersje do 1.0 były podpisane innym kluczem w każdej budowie, więc przy przejściu na 1.1 odinstaluj starą wersję. Od 1.1 (czyli także 1.2 z Telegramem, 1.3 i 1.4 ze zdjęciem) aplikacja jest podpisana stałym, publicznym kluczem testowym z pliku `app/debug.keystore` (tylko do użytku osobistego), więc kolejne wersje instalują się na wierzchu, a ustawienia, w tym klucz Gemini i token bota, zostają.
+Wersje do 1.0 były podpisane innym kluczem w każdej budowie, więc przy przejściu na 1.1 odinstaluj starą wersję. Od 1.1 (czyli także 1.2 z Telegramem, 1.3 i 1.4 ze zdjęciem, 1.5 z dzieleniem inteligentnym) aplikacja jest podpisana stałym, publicznym kluczem testowym z pliku `app/debug.keystore` (tylko do użytku osobistego), więc kolejne wersje instalują się na wierzchu, a ustawienia, w tym klucz Gemini i token bota, zostają.
 
 **Przez Android Studio**
 File → Open → folder projektu, poczekaj na synchronizację, potem Build → Build APK(s) albo Run z podłączonym telefonem.
 
 ## Testy logiki
 
-Podział, pomiar, rozmowa z Gemini (JSON, zapytanie ze zdjęciem lub bez, odczyt odpowiedzi i błędów, ponawianie, pamięć rozmowy), klient Telegrama i pętla nasłuchu oraz rachunki na zdjęciu (zmniejszanie, obrót według EXIF, nazwy plików) nie zależą od Androida i mają testy (zwykła Java 17+). Testy Gemini i Telegrama same uruchamiają sztuczny serwer HTTP:
+Podział (zwykły i inteligentny), pomiar, rozmowa z Gemini (JSON, zapytanie ze zdjęciem lub bez, odczyt odpowiedzi i błędów, ponawianie, pamięć rozmowy), klient Telegrama i pętla nasłuchu oraz rachunki na zdjęciu (zmniejszanie, obrót według EXIF, nazwy plików) nie zależą od Androida i mają testy (zwykła Java 17+). Testy Gemini i Telegrama same uruchamiają sztuczny serwer HTTP, a test dzielenia inteligentnego trwa kilkanaście sekund:
 
 ```
-javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Splitter.java app/src/main/java/pl/dzielnik/Measure.java tests/SplitterTest.java
+javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Splitter.java app/src/main/java/pl/dzielnik/SmartSplitter.java app/src/main/java/pl/dzielnik/Measure.java tests/SplitterTest.java
 java -cp out SplitterTest
+
+javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Splitter.java app/src/main/java/pl/dzielnik/SmartSplitter.java tests/pl/dzielnik/SmartSplitterTest.java
+java -cp out pl.dzielnik.SmartSplitterTest
 
 javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Json.java app/src/main/java/pl/dzielnik/Gemini.java app/src/main/java/pl/dzielnik/History.java tests/pl/dzielnik/GeminiTest.java
 java -cp out pl.dzielnik.GeminiTest
 
-javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Json.java app/src/main/java/pl/dzielnik/Splitter.java app/src/main/java/pl/dzielnik/Measure.java app/src/main/java/pl/dzielnik/Telegram.java app/src/main/java/pl/dzielnik/TelegramBridge.java app/src/main/java/pl/dzielnik/Dest.java tests/pl/dzielnik/TelegramTest.java
+javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/Json.java app/src/main/java/pl/dzielnik/Splitter.java app/src/main/java/pl/dzielnik/SmartSplitter.java app/src/main/java/pl/dzielnik/Measure.java app/src/main/java/pl/dzielnik/Telegram.java app/src/main/java/pl/dzielnik/TelegramBridge.java app/src/main/java/pl/dzielnik/Dest.java tests/pl/dzielnik/TelegramTest.java
 java -cp out pl.dzielnik.TelegramTest
 
 javac -encoding UTF-8 -d out app/src/main/java/pl/dzielnik/PhotoMath.java tests/pl/dzielnik/PhotoMathTest.java

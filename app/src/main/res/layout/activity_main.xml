@@ -183,6 +183,22 @@
                 android:layout_height="wrap_content"
                 android:text="Najnowsze powiadomienie jest w panelu na samej górze. Przy tej opcji część 1 przyjdzie ostatnia, więc będzie pierwsza od góry." />
 
+            <Switch
+                android:id="@+id/sw_smart"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:minHeight="48dp"
+                android:text="Dzielenie inteligentne"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tnie najpierw między sekcjami (po pustym wierszu), potem między punktami listy i zdaniami. Nagłówek zostaje razem z treścią, a sekcja, która się mieści w limicie, nie jest przecinana. Może dać więcej części niż zwykłe dzielenie." />
+
             <TextView
                 android:id="@+id/preview"
                 android:layout_width="match_parent"

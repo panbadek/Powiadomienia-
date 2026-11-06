@@ -13,6 +13,7 @@ final class Prefs {
     static final String DELAY = "delay";
     static final String TEST_LEN = "testLen";
     static final String REVERSE = "reverse";
+    static final String SMART = "smart";
     static final String GEMINI_KEY = "gemini_key";
     static final String GEMINI_MODEL = "gemini_model";
     static final String GEMINI_REPLY = "gemini_reply";
@@ -55,6 +56,11 @@ final class Prefs {
 
     static boolean reverse(Context c) {
         return get(c).getBoolean(REVERSE, false);
+    }
+
+    /** Dzielenie inteligentne (po sekcjach, listach i zdaniach) zamiast zwykłego dzielenia po zdaniach. */
+    static boolean smart(Context c) {
+        return get(c).getBoolean(SMART, false);
     }
 
     static String geminiKey(Context c) {
